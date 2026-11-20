@@ -71,9 +71,15 @@ export function NoteEditor({ id, zoom, pageWidth }: { id: string; zoom: number; 
   const open = useUi((s) => s.noteOpen === id);
   const o = useEditor((s) => s.objects[id]) as NoteObject | undefined;
   if (!open || !o) return null;
-  const left = Math.min(o.rect.x + o.rect.width + 4, pageWidth - 200) * zoom;
+  // Position in screen pixels: next to the icon, but kept inside the page (the popup is 200px wide).
+  const POPUP_W = 200;
+  const right = (o.rect.x + o.rect.width) * zoom + 4;
+  const fitsRight = right + POPUP_W <= pageWidth * zoom - 4;
+  // No room to the right (narrow screens): open below the icon instead of covering it.
+  const left = fitsRight ? right : Math.max(4, Math.min(o.rect.x * zoom, pageWidth * zoom - POPUP_W - 4));
+  const top = fitsRight ? o.rect.y * zoom : (o.rect.y + o.rect.height) * zoom + 4;
   return (
-    <div className="note-popup" style={{ left, top: o.rect.y * zoom }} onPointerDown={(e) => e.stopPropagation()}>
+    <div className="note-popup" style={{ left, top }} onPointerDown={(e) => e.stopPropagation()}>
       <textarea
         autoFocus
         aria-label="Note text"

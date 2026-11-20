@@ -340,3 +340,5 @@ select.field { appearance: auto; }
 .annot-placeholder { width: 100%; height: 100%; border: 1px dashed #9ca3af; }
 .page-detail { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .page-detail canvas { position: absolute; }
+/* Editors live inside the (pointer-transparent) object layer: they must take input themselves. */
+.note-popup, .text-editor { pointer-events: auto; }

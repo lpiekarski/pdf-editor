@@ -178,3 +178,39 @@ test('can keep added objects editable as annotations', async ({ page }) => {
   expect(annots).toContain('FreeText');
   expect(text).not.toContain('Editable later'); // not flattened into the page
 });
+
+test('sticky note: type a comment, close it, reopen it and delete it', async ({ page }) => {
+  await open(page, 'flat-form.pdf');
+  await page.getByTestId('tool-note').click();
+  await clickOnPage(page, 300, 360);
+  const popup = page.locator('.note-popup');
+  await expect(popup).toBeVisible();
+  // Click elsewhere and back into the box: the click must reach the textarea, not the page below.
+  await clickOnPage(page, 100, 700);
+  await popup.locator('textarea').click();
+  await page.keyboard.type('Proszę sprawdzić');
+  await popup.getByRole('button', { name: 'Done' }).click();
+  await expect(popup).toBeHidden();
+
+  const out = await save(page, 'note.pdf');
+  const task = getDocument({ data: out.slice() });
+  const pdf = await task.promise;
+  const annots = (await (await pdf.getPage(1)).getAnnotations()) as { subtype: string; contentsObj: { str: string } }[];
+  await task.destroy();
+  expect(annots.find((a) => a.subtype === 'Text')?.contentsObj.str).toBe('Proszę sprawdzić');
+
+  await page.locator('.obj-note').click();
+  await expect(popup.locator('textarea')).toHaveValue('Proszę sprawdzić');
+  await popup.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.locator('.obj-note')).toHaveCount(0);
+});
+
+test('text box: clicking inside while editing keeps editing', async ({ page }) => {
+  await open(page, 'flat-form.pdf');
+  await page.getByTestId('tool-text').click();
+  await clickOnPage(page, 300, 500);
+  await page.keyboard.type('Hello');
+  await page.locator('.text-editor').click({ position: { x: 2, y: 5 } });
+  await page.keyboard.type('Say ');
+  await expect(page.locator('.text-editor')).toHaveValue('Say Hello');
+});
