@@ -244,3 +244,33 @@ select.field { appearance: auto; }
 }
 .fill-bar span { flex: 1; min-width: 200px; }
 .link-btn { border: none; background: none; color: var(--accent); font-weight: 600; padding: 6px 4px; }
+
+/* ---------- signature dialog ---------- */
+.sig-tabs { margin: 0 -20px 12px; padding: 0 12px; }
+.sig-body { display: flex; flex-direction: column; gap: 10px; }
+.draw-wrap { position: relative; height: 180px; border: 1px solid var(--border); border-radius: 8px; background: #fff; touch-action: none; }
+.draw-pad { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.draw-line { position: absolute; left: 24px; right: 24px; bottom: 44px; border-bottom: 1px solid #cbd5e1; pointer-events: none; }
+.draw-hint { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; pointer-events: none; }
+.sig-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.check.inline { margin: 0 0 0 auto; font-size: 13px; }
+.sig-name { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; }
+.sig-fonts { display: flex; flex-direction: column; gap: 6px; }
+.sig-fonts button { height: 64px; font-size: 34px; border: 1px solid var(--border); border-radius: 8px; background: #fff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sig-fonts button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.upload-drop { display: grid; place-items: center; min-height: 160px; padding: 16px; border: 2px dashed var(--border); border-radius: 8px; text-align: center; color: var(--muted); font-size: 14px; cursor: pointer; background: repeating-conic-gradient(#f3f4f6 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+.upload-drop input { display: none; }
+.upload-drop img { max-width: 100%; max-height: 200px; }
+.sig-saved { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sig-saved-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sig-saved-img { width: 100%; height: 80px; padding: 6px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.sig-saved-img:hover { border-color: var(--accent); }
+.sig-saved-img img { max-width: 100%; max-height: 100%; }
+@media (max-width: 600px) {
+  .modal { padding: 16px; }
+  .draw-wrap { height: 200px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal { max-height: 100vh; }
+  .draw-wrap { height: 55vh; }
+}

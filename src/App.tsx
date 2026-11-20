@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import { openFile, useDoc } from './model/docStore';
 import { useEditor } from './model/editorStore';
@@ -17,6 +17,8 @@ import { SaveButton } from './ui/SaveDialog';
 import { pdfjs } from './viewer/pdfjs';
 import { FillLayer } from './forms/FillLayer';
 import { FillBar, FillToggle } from './forms/FillBar';
+import { SignatureDialog } from './signature/graphic/SignatureDialog';
+import { placeImage } from './editor/images';
 
 function useFileDrop() {
   useEffect(() => {
@@ -61,6 +63,7 @@ export function App() {
   useDeselectOnBackground();
   useEditorShortcuts(hasDoc);
   useMarkupTool();
+  const [sigOpen, setSigOpen] = useState(false);
 
   const slots: ShellSlots = {
     viewer: (
@@ -79,7 +82,7 @@ export function App() {
     tools: (
       <>
         <FillToggle />
-        <Tools />
+        <Tools onSignature={() => setSigOpen(true)} />
       </>
     ),
     banner: <FillBar />,
@@ -98,6 +101,16 @@ export function App() {
       <ContextMenu />
       <MarkupApplyButton />
       <Toast />
+      {sigOpen && (
+        <SignatureDialog
+          onClose={() => setSigOpen(false)}
+          onDone={(sig) => {
+            setSigOpen(false);
+            const img = useEditor.getState().addImage({ bytes: sig.bytes, mime: 'image/png', width: sig.width, height: sig.height });
+            placeImage(img, { signature: true, maxWidth: 160 });
+          }}
+        />
+      )}
     </>
   );
 }
