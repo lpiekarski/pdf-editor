@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.pdf binary
+*.p12 binary
+*.ttf binary
+*.key -text
+*.crt -text
