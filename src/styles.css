@@ -226,3 +226,21 @@ select.field { appearance: auto; }
 .modal .check input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
 .note { font-size: 13px; line-height: 1.45; padding: 8px 10px; border-radius: 6px; background: var(--panel-2); }
 .note.warn { background: #fff7ed; color: #9a3412; }
+
+/* ---------- fill mode ---------- */
+.fill-layer { position: absolute; inset: 0; pointer-events: none; }
+.hotspot {
+  position: absolute; pointer-events: auto; padding: 0; cursor: text;
+  border: 1.5px dashed rgb(37 99 235 / 0.7); background: rgb(37 99 235 / 0.08); border-radius: 3px;
+  animation: hotspot-in 0.25s ease-out;
+}
+.hotspot:hover { background: rgb(37 99 235 / 0.18); }
+.hotspot-checkbox { cursor: pointer; }
+.hotspot.filled { border-color: transparent; background: transparent; }
+@keyframes hotspot-in { from { opacity: 0; } }
+.fill-bar {
+  flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px;
+  background: #eff6ff; border-bottom: 1px solid #bfdbfe; font-size: 14px; color: #1e3a8a;
+}
+.fill-bar span { flex: 1; min-width: 200px; }
+.link-btn { border: none; background: none; color: var(--accent); font-weight: 600; padding: 6px 4px; }

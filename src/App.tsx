@@ -15,6 +15,8 @@ import { useMarkupTool } from './editor/markup';
 import { FormLayer } from './forms/FormLayer';
 import { SaveButton } from './ui/SaveDialog';
 import { pdfjs } from './viewer/pdfjs';
+import { FillLayer } from './forms/FillLayer';
+import { FillBar, FillToggle } from './forms/FillBar';
 
 function useFileDrop() {
   useEffect(() => {
@@ -41,7 +43,7 @@ function useDeselectOnBackground() {
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest('.obj, .handle, .sel-frame, .text-editor, .note-popup, .inspector, .ctx-menu, .sheet, .modal, .topbar, .bottombar, .sidebar, .tool-popover, .floating-apply, .field'))
+      if (t.closest('.obj, .handle, .sel-frame, .text-editor, .note-popup, .inspector, .ctx-menu, .sheet, .modal, .topbar, .bottombar, .sidebar, .tool-popover, .floating-apply, .field, .hotspot, .fill-bar'))
         return;
       const s = useEditor.getState();
       if (s.selection.length) s.select([]);
@@ -69,11 +71,18 @@ export function App() {
           <>
             {hasForm && <FormLayer info={info} zoom={zoom} />}
             <ObjectLayer info={info} zoom={zoom} />
+            <FillLayer info={info} zoom={zoom} />
           </>
         )}
       />
     ),
-    tools: <Tools />,
+    tools: (
+      <>
+        <FillToggle />
+        <Tools />
+      </>
+    ),
+    banner: <FillBar />,
     actions: (
       <>
         <UndoRedo />

@@ -11,6 +11,8 @@ import { layoutText } from './textLayout';
 import { TextEditor, NoteEditor } from './TextEditor';
 import { useUi } from './uiStore';
 import { outlineToSvgPath, strokeOutline } from './ink';
+import { textForField, useDetected } from '../forms/FillLayer';
+import { formatDate } from './factory';
 
 const LONG_PRESS_MS = 500;
 const MOVE_SLOP = 4; // px before a press becomes a drag
@@ -30,6 +32,8 @@ export function ObjectLayer({ info, zoom }: Props) {
   const [inkPts, setInkPts] = useState<Point[] | null>(null);
   const page = viewSize(info, 1);
 
+  // Text placed on a detected blank snaps onto its line/box.
+  const detected = useDetected(info, tool === 'text' || tool === 'date');
   const creating = tool !== 'select' && (POINT_TOOLS.includes(tool) || DRAG_TOOLS.includes(tool) || tool === 'ink');
 
   const toView = (e: { clientX: number; clientY: number }): Point => {
@@ -93,6 +97,13 @@ export function ObjectLayer({ info, zoom }: Props) {
       setDraft(null);
       if (ev.type === 'pointercancel') return;
       const style = useEditor.getState().style;
+      const hit = (tool === 'text' || tool === 'date') && detected.find((f) => f.kind !== 'checkbox' && b.x >= f.rect.x && b.x <= f.rect.x + f.rect.width && b.y >= f.rect.y - 4 && b.y <= f.rect.y + f.rect.height + 4);
+      if (hit) {
+        const snapped = textForField(hit, info.index);
+        if (tool === 'date' && snapped.kind === 'text') snapped.text = formatDate();
+        finishTool(snapped);
+        return;
+      }
       const o = POINT_TOOLS.includes(tool)
         ? createAtPoint(tool, info.index, b, style)
         : createFromDrag(tool, info.index, normRect(a, b), style, a, b);

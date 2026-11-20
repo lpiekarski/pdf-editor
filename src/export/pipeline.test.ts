@@ -119,3 +119,23 @@ describe('exportPdf', () => {
     expect(out).toBe(bytes);
   });
 });
+
+describe('make fillable', () => {
+  it('turns detected blanks into real AcroForm fields', async () => {
+    const { detectFields } = await import('../forms/detect');
+    const { OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const bytes = new Uint8Array(readFileSync('tests/fixtures/flat-form.pdf'));
+    const task = getDocument({ data: bytes.slice() });
+    const pdf = await task.promise;
+    const p = await pdf.getPage(1);
+    const g = { viewBox: p.view as PageGeometry['viewBox'], rotation: p.rotate };
+    const detected = detectFields(0, g, await p.getOperatorList(), OPS, (await p.getTextContent()).items as never);
+    await task.destroy();
+    const out = await exportPdf({ bytes, pages: [g], objects: [], images, formValues: {}, createFields: detected });
+    const fields = (await PDFDocument.load(out)).getForm().getFields();
+    expect(fields.map((f) => f.constructor.name).sort()).toEqual([
+      'PDFCheckBox', 'PDFCheckBox', 'PDFTextField', 'PDFTextField', 'PDFTextField', 'PDFTextField', 'PDFTextField', 'PDFTextField',
+    ]);
+    if (hasPython) expect(pyValidate('check', writeOut('fillable.pdf', out)).ok).toBe(true);
+  });
+});

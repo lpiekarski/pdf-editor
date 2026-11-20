@@ -12,6 +12,8 @@ import { IncrementalUpdate } from '../pdf/incremental';
 import { drawObject, prepareFreshContentStream, ResourceCache } from './writeContent';
 import { writeMarkup, writeNote } from './writeAnnots';
 import { applyFormValues } from '../forms/acroform';
+import { createFieldsFromDetected } from '../forms/convert';
+import type { DetectedField } from '../forms/detect';
 
 export interface ExportInput {
   bytes: Uint8Array;
@@ -21,6 +23,8 @@ export interface ExportInput {
   images: Record<string, StoredImage>;
   formValues: Record<string, FormValue>;
   flattenForms?: boolean;
+  /** Detected blanks to turn into real AcroForm fields. */
+  createFields?: DetectedField[];
 }
 
 const CONTENT_KINDS = new Set(['text', 'image', 'shape', 'ink', 'whiteout', 'mark']);
@@ -33,6 +37,8 @@ export async function exportPdf(input: ExportInput): Promise<Uint8Array> {
   if (Object.keys(input.formValues).length || input.flattenForms) {
     await applyFormValues(doc, input.formValues, { flatten: !!input.flattenForms, fonts: res });
   }
+
+  if (input.createFields?.length) await createFieldsFromDetected(doc, input.createFields, input.pages, res);
 
   const byPage = new Map<number, EditorObject[]>();
   for (const o of input.objects) {
