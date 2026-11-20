@@ -6,3 +6,4 @@ playwright-report
 .venv
 *.tsbuildinfo
 tests/output
+public/pdfjs
