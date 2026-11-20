@@ -1,5 +1,21 @@
 # PDF Editor — Implementation Plan
 
+## Status (2026-11-20)
+
+All 11 steps are implemented and covered by tests: 33 unit/integration tests, plus Playwright end-to-end tests on desktop Chromium, Android Chromium and iPhone WebKit emulation. Signed outputs are validated with pyHanko and qpdf.
+
+**Deviations from the plan:**
+- The incremental writer lives in `src/pdf/incremental.ts`, because export uses it too, not only signing. *All* saves are incremental, not just saves of signed files.
+- PKCS#12 files are read with node-forge, because WebCrypto can't decrypt the legacy 3DES files that Windows exports. The key is then imported into WebCrypto as non-extractable. Only RSA keys are supported.
+- Field detection runs on pdf.js v6 operator lists (a new path encoding).
+
+**Not done yet:**
+- An export option to keep text/shapes as editable annotations (FreeText/Stamp/Square/Ink). They are always flattened.
+- Selecting and deleting annotations that already exist in a PDF (the `locked` flag exists, but existing annotations aren't loaded into the editor).
+- Enforcing FieldMDP field locks set by earlier signers. DocMDP is enforced.
+- Tiled re-rendering at very high zoom. Canvases are capped by pixel count instead, so deep zoom is softer.
+- Manual checks on real iPhone/Android devices and in Adobe Acrobat Reader.
+
 ## Context
 `C:\Users\lukasz\projects\pdf-editor` is empty except for `PLAN.md`, the earlier design notes. The goal is a **static, fully client-side web app** that works well in **desktop browsers and on phones**. It should:
 - **Edit like a WYSIWYG editor:** add any text, images, shapes and freehand drawings; highlight, underline and strike out existing text; add sticky notes; cover content with white-out.

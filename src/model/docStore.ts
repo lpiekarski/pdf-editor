@@ -75,8 +75,11 @@ export const useDoc = create<DocState>((set, get) => ({
           set({ passwordPrompt: { incorrect, resolve: (pw) => { set({ passwordPrompt: null }); resolve(pw); } } }),
         ),
       );
-      const hasForm = await hasAcroForm(pdf);
-      set({ file: { name, bytes }, pdf, pages, hasForm, loading: false });
+      set({ file: { name, bytes }, pdf, pages, hasForm: false, loading: false });
+      // Scanning every page for form widgets can take a while on long documents: do it after showing the first page.
+      hasAcroForm(pdf).then((hasForm) => {
+        if (hasForm && get().pdf === pdf) set({ hasForm });
+      });
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : String(e) });
     }

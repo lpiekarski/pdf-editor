@@ -48,11 +48,13 @@ export async function openPdf(
     update(pw);
   };
   const pdf = await task.promise;
-  const pages: PageInfo[] = [];
-  for (let i = 0; i < pdf.numPages; i++) {
-    const p = await pdf.getPage(i + 1);
-    pages.push({ index: i, viewBox: p.view as PageInfo['viewBox'], rotation: normalizeRotation(p.rotate) });
-  }
+  // Page geometry is needed up front for layout; fetch it in parallel (the worker pipelines requests).
+  const pages = await Promise.all(
+    Array.from({ length: pdf.numPages }, async (_, i): Promise<PageInfo> => {
+      const p = await pdf.getPage(i + 1);
+      return { index: i, viewBox: p.view as PageInfo['viewBox'], rotation: normalizeRotation(p.rotate) };
+    }),
+  );
   return { pdf, pages };
 }
 

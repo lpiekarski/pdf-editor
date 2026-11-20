@@ -66,9 +66,16 @@ interface PdfjsAnnot {
 
 /** True when any page has an interactive (non-signature) form widget. */
 export async function hasAcroForm(pdf: PDFDocumentProxy): Promise<boolean> {
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const annots = (await (await pdf.getPage(i)).getAnnotations()) as PdfjsAnnot[];
-    if (annots.some((a) => a.subtype === 'Widget' && a.fieldName && a.fieldType !== 'Sig')) return true;
+  const BATCH = 16;
+  for (let start = 1; start <= pdf.numPages; start += BATCH) {
+    const pages = Array.from({ length: Math.min(BATCH, pdf.numPages - start + 1) }, (_, k) => start + k);
+    const results = await Promise.all(
+      pages.map(async (n) => {
+        const annots = (await (await pdf.getPage(n)).getAnnotations()) as PdfjsAnnot[];
+        return annots.some((a) => a.subtype === 'Widget' && a.fieldName && a.fieldType !== 'Sig');
+      }),
+    );
+    if (results.some(Boolean)) return true;
   }
   return false;
 }
