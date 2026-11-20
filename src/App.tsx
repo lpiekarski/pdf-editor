@@ -12,6 +12,9 @@ import { Inspector } from './editor/Inspector';
 import { ContextMenu, Toast } from './editor/ContextMenu';
 import { useEditorShortcuts } from './editor/shortcuts';
 import { useMarkupTool } from './editor/markup';
+import { FormLayer } from './forms/FormLayer';
+import { SaveButton } from './ui/SaveDialog';
+import { pdfjs } from './viewer/pdfjs';
 
 function useFileDrop() {
   useEffect(() => {
@@ -38,7 +41,7 @@ function useDeselectOnBackground() {
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest('.obj, .handle, .sel-frame, .text-editor, .note-popup, .inspector, .ctx-menu, .sheet, .modal, .topbar, .bottombar, .sidebar, .tool-popover, .floating-apply'))
+      if (t.closest('.obj, .handle, .sel-frame, .text-editor, .note-popup, .inspector, .ctx-menu, .sheet, .modal, .topbar, .bottombar, .sidebar, .tool-popover, .floating-apply, .field'))
         return;
       const s = useEditor.getState();
       if (s.selection.length) s.select([]);
@@ -50,6 +53,7 @@ function useDeselectOnBackground() {
 
 export function App() {
   const hasDoc = useDoc((s) => !!s.pdf);
+  const hasForm = useDoc((s) => s.hasForm);
   const desktop = useIsDesktop();
   useFileDrop();
   useDeselectOnBackground();
@@ -57,9 +61,25 @@ export function App() {
   useMarkupTool();
 
   const slots: ShellSlots = {
-    viewer: <Viewer renderOverlay={(info, zoom) => <ObjectLayer info={info} zoom={zoom} />} />,
+    viewer: (
+      <Viewer
+        // With form fields, pdf.js leaves widget appearances off the canvas and we draw live inputs instead.
+        annotationMode={hasForm ? pdfjs.AnnotationMode.ENABLE_FORMS : pdfjs.AnnotationMode.ENABLE}
+        renderOverlay={(info, zoom) => (
+          <>
+            {hasForm && <FormLayer info={info} zoom={zoom} />}
+            <ObjectLayer info={info} zoom={zoom} />
+          </>
+        )}
+      />
+    ),
     tools: <Tools />,
-    actions: <UndoRedo />,
+    actions: (
+      <>
+        <UndoRedo />
+        <SaveButton showLabel={desktop} />
+      </>
+    ),
     inspector: <Inspector />,
   };
   return (

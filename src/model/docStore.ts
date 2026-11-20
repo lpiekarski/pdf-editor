@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { openPdf, type PageInfo, type PDFDocumentProxy } from '../viewer/pdfjs';
 import { useEditor } from './editorStore';
+import { hasAcroForm } from '../forms/acroform';
 
 export interface LoadedFile {
   name: string;
@@ -17,6 +18,8 @@ interface DocState {
   file: LoadedFile | null;
   pdf: PDFDocumentProxy | null;
   pages: PageInfo[];
+  /** The document has AcroForm fields (rendered as HTML inputs instead of on the canvas). */
+  hasForm: boolean;
   loading: boolean;
   error: string | null;
   passwordPrompt: PasswordPrompt | null;
@@ -28,6 +31,7 @@ export const useDoc = create<DocState>((set, get) => ({
   file: null,
   pdf: null,
   pages: [],
+  hasForm: false,
   loading: false,
   error: null,
   passwordPrompt: null,
@@ -40,14 +44,15 @@ export const useDoc = create<DocState>((set, get) => ({
           set({ passwordPrompt: { incorrect, resolve: (pw) => { set({ passwordPrompt: null }); resolve(pw); } } }),
         ),
       );
-      set({ file: { name, bytes }, pdf, pages, loading: false });
+      const hasForm = await hasAcroForm(pdf);
+      set({ file: { name, bytes }, pdf, pages, hasForm, loading: false });
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : String(e) });
     }
   },
   async close() {
     const { pdf } = get();
-    set({ file: null, pdf: null, pages: [] });
+    set({ file: null, pdf: null, pages: [], hasForm: false });
     useEditor.getState().reset();
     if (pdf) await pdf.loadingTask.destroy();
   },
