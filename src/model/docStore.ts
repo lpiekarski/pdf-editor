@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { openPdf, type PageInfo, type PDFDocumentProxy } from '../viewer/pdfjs';
+import { useEditor } from './editorStore';
 
 export interface LoadedFile {
   name: string;
@@ -47,6 +48,7 @@ export const useDoc = create<DocState>((set, get) => ({
   async close() {
     const { pdf } = get();
     set({ file: null, pdf: null, pages: [] });
+    useEditor.getState().reset();
     if (pdf) await pdf.loadingTask.destroy();
   },
 }));
