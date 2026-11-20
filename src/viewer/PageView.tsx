@@ -84,7 +84,7 @@ export function PageView({ pdf, info, zoom, visible, annotationMode, renderKey, 
       clearTimeout(timer);
       task?.cancel();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pdf, info, zoom, visible, mode, renderKey]);
 
   // Text layer (selectable text, used for highlighting and snapping).

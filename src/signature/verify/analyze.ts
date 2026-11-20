@@ -31,6 +31,10 @@ export interface SignatureInfo {
   location: string | null;
   contactInfo: string | null;
   certification: number | null; // DocMDP P if this is a certification signature
+  /** FieldMDP lock set by this signature (from /Reference or the field's /Lock). */
+  fieldLock: FieldLock | null;
+  /** Form fields changed after this signature. */
+  changedFields: string[];
   level: Level;
   /** /ByteRange end — the length of the signed revision. */
   revisionEnd: number;
@@ -43,6 +47,18 @@ export interface SignatureInfo {
   changesAllowed: boolean;
   revocationInfo: { ocsps: number; crls: number; embeddedInCms: boolean };
   errors: string[];
+}
+
+export interface FieldLock {
+  action: 'All' | 'Include' | 'Exclude';
+  fields: string[];
+}
+
+export function isFieldLocked(lock: FieldLock | null, name: string): boolean {
+  if (!lock) return false;
+  if (lock.action === 'All') return true;
+  const listed = lock.fields.includes(name);
+  return lock.action === 'Include' ? listed : !listed;
 }
 
 export interface DocSignatures {
@@ -138,6 +154,36 @@ function widgetLocation(doc: PDFDocument, w: PDFDict | null): { page: number | n
   return { page: page >= 0 ? page : null, rect: visible ? [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])] : null };
 }
 
+function readLock(d: PDFDict | undefined | null): FieldLock | null {
+  if (!d) return null;
+  const action = d.get(PDFName.of('Action'))?.toString().slice(1);
+  if (action !== 'All' && action !== 'Include' && action !== 'Exclude') return null;
+  const arr = d.lookupMaybe(PDFName.of('Fields'), PDFArray);
+  const fields = arr ? arr.asArray().map((x) => str(x) ?? '').filter(Boolean) : [];
+  return { action, fields };
+}
+
+/** FieldMDP from the signature's /Reference, or else from the signature field's /Lock. */
+function fieldLockOf(sig: PDFDict, field: PDFDict | null, ctx: PDFDocument['context']): FieldLock | null {
+  const refs = sig.lookupMaybe(PDFName.of('Reference'), PDFArray);
+  for (let i = 0; i < (refs?.size() ?? 0); i++) {
+    const r = refs!.lookup(i);
+    if (r instanceof PDFDict && r.get(PDFName.of('TransformMethod'))?.toString() === '/FieldMDP') {
+      const lock = readLock(r.lookupMaybe(PDFName.of('TransformParams'), PDFDict));
+      if (lock) return lock;
+    }
+  }
+  let d: PDFDict | null = field;
+  for (let i = 0; d && i < 10; i++) {
+    const lock = readLock(d.lookupMaybe(PDFName.of('Lock'), PDFDict));
+    if (lock) return lock;
+    const p = d.get(PDFName.of('Parent'));
+    const pd = p instanceof PDFRef ? ctx.lookup(p) : p;
+    d = pd instanceof PDFDict ? pd : null;
+  }
+  return null;
+}
+
 function certificationLevel(sig: PDFDict): number | null {
   const refs = sig.lookupMaybe(PDFName.of('Reference'), PDFArray);
   if (!refs) return null;
@@ -190,6 +236,8 @@ export async function analyzeSignatures(bytes: Uint8Array): Promise<DocSignature
       location: str(sig.get(PDFName.of('Location'))),
       contactInfo: str(sig.get(PDFName.of('ContactInfo'))),
       certification: certificationLevel(sig),
+      fieldLock: fieldLockOf(sig, e.widget, doc.context),
+      changedFields: [],
       level: 'Unknown',
       revisionEnd: br.length === 4 ? br[2] + br[3] : 0,
       coversWholeFile: br.length === 4 && br[2] + br[3] === bytes.length,
@@ -307,11 +355,19 @@ export async function analyzeSignatures(bytes: Uint8Array): Promise<DocSignature
   for (const s of results) {
     if (s.integrity === 'malformed' || s.coversWholeFile || !s.revisionEnd) continue;
     try {
-      s.changes = await classifyChanges(bytes.subarray(0, s.revisionEnd), doc);
+      const diff = await classifyChanges(bytes.subarray(0, s.revisionEnd), doc);
+      s.changes = diff.kinds;
+      s.changedFields = diff.fields;
       const p = docMdp;
       s.changesAllowed = s.changes.every((c) =>
         c === 'signing' ? p !== 1 : c === 'form' ? p !== 1 : c === 'annotation' ? p === null || p === 3 : false,
       );
+      // FieldMDP: fields locked by this signature must not change afterwards.
+      const violated = s.changedFields.filter((f) => isFieldLocked(s.fieldLock, f));
+      if (violated.length) {
+        s.changesAllowed = false;
+        s.errors.push(`Locked field${violated.length > 1 ? 's' : ''} changed after signing: ${violated.join(', ')}.`);
+      }
     } catch {
       s.changes = ['other'];
       s.changesAllowed = false;
@@ -328,9 +384,10 @@ function fingerprint(o: PDFObject): string {
 }
 
 /** Compares the signed revision with the final document and classifies every changed object. */
-export async function classifyChanges(signedBytes: Uint8Array, finalDoc: PDFDocument): Promise<ChangeKind[]> {
+export async function classifyChanges(signedBytes: Uint8Array, finalDoc: PDFDocument): Promise<{ kinds: ChangeKind[]; fields: string[] }> {
   const old = await PDFDocument.load(signedBytes, { updateMetadata: false, ignoreEncryption: true, throwOnInvalidObject: false });
   const kinds = new Set<ChangeKind>();
+  const fields = new Set<string>();
   const oldCtx = old.context;
   const newCtx = finalDoc.context;
 
@@ -356,9 +413,13 @@ export async function classifyChanges(signedBytes: Uint8Array, finalDoc: PDFDocu
     if (before && fingerprint(before) === fingerprint(obj)) continue;
     const k = classifyObject(obj, before ?? null, newCtx);
     if (k !== 'neutral') kinds.add(k);
+    if (k === 'form' && obj instanceof PDFDict) {
+      const name = fieldName(obj, newCtx);
+      if (name) fields.add(name);
+    }
   }
   const order: ChangeKind[] = ['signing', 'form', 'annotation', 'other'];
-  return order.filter((k) => kinds.has(k));
+  return { kinds: order.filter((k) => kinds.has(k)), fields: [...fields] };
 }
 
 function classifyObject(obj: PDFObject, before: PDFObject | null, ctx: PDFDocument['context']): ChangeKind | 'neutral' {
@@ -397,6 +458,20 @@ function classifyObject(obj: PDFObject, before: PDFObject | null, ctx: PDFDocume
   if (d.has(PDFName.of('Producer')) || d.has(PDFName.of('ModDate')) || type === '/Metadata') return 'neutral';
   // Unknown new streams (e.g. content streams) are judged by whether a page's /Contents changed.
   return 'neutral';
+}
+
+/** Fully qualified field name of a field or widget dictionary (joins /T up the /Parent chain). */
+function fieldName(d: PDFDict, ctx: PDFDocument['context']): string | null {
+  const parts: string[] = [];
+  let cur: PDFDict | null = d;
+  for (let i = 0; cur && i < 20; i++) {
+    const t = str(cur.get(PDFName.of('T')));
+    if (t) parts.unshift(t);
+    const p: PDFObject | undefined = cur.get(PDFName.of('Parent'));
+    const pd: PDFObject | undefined = p instanceof PDFRef ? ctx.lookup(p) : p;
+    cur = pd instanceof PDFDict ? pd : null;
+  }
+  return parts.length ? parts.join('.') : null;
 }
 
 function parentFT(d: PDFDict, ctx: PDFDocument['context']): string | undefined {

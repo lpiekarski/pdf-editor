@@ -44,6 +44,8 @@ export function SignDialog({ onClose }: { onClose(): void }) {
   const [contact, setContact] = useState('');
   const [certify, setCertify] = useState<0 | DocMdpLevel>(0);
   const [showText, setShowText] = useState(true);
+  const [lockAll, setLockAll] = useState(false);
+  const hasForm = useDoc((s) => s.hasForm);
   const [placement, setPlacement] = useState<Placement>({ kind: 'box' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export function SignDialog({ onClose }: { onClose(): void }) {
         location: location || undefined,
         contactInfo: contact || undefined,
         certify: certify || undefined,
+        lockFields: lockAll ? { action: 'All', fields: [] } : undefined,
       });
       // 3. Offer the signed file for saving and reopen it so the signature panel shows it.
       const name = suggestedName(file.name, '-signed');
@@ -230,6 +233,12 @@ export function SignDialog({ onClose }: { onClose(): void }) {
                 <option value={2}>Certify — allow form filling and signing</option>
                 <option value={3}>Certify — allow form filling, signing and comments</option>
               </select>
+            </label>
+          )}
+          {hasForm && (
+            <label className="check">
+              <input type="checkbox" checked={lockAll} onChange={(e) => setLockAll(e.target.checked)} data-testid="lock-fields" />
+              <span>Lock all form fields after signing (later changes to them will invalidate this signature)</span>
             </label>
           )}
           <p className="muted small">Level: PAdES-B-B (no timestamp). Any later change to the document will be visible to anyone checking the signature.</p>

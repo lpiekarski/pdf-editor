@@ -35,6 +35,8 @@ export interface SignOptions {
   contactInfo?: string;
   /** Certification signature with DocMDP permissions (only allowed as the first signature). */
   certify?: DocMdpLevel;
+  /** FieldMDP: form fields that become read-only once this signature is applied. */
+  lockFields?: { action: 'All' | 'Include' | 'Exclude'; fields: string[] };
   date?: Date;
 }
 
@@ -107,6 +109,20 @@ export async function signPdf(bytes: Uint8Array, opts: SignOptions): Promise<Uin
     catalog.set(PDFName.of('Perms'), perms);
   }
 
+  // FieldMDP: lock form fields once this signature is applied.
+  const lock = opts.lockFields;
+  const lockDict = lock
+    ? ctx.obj({ Type: 'SigFieldLock', Action: lock.action, ...(lock.action !== 'All' ? { Fields: lock.fields.map((f) => pdfText(f)) } : {}) })
+    : null;
+  if (lock) {
+    const params = ctx.obj({ Type: 'TransformParams', Action: lock.action, V: '1.2' });
+    if (lock.action !== 'All') params.set(PDFName.of('Fields'), ctx.obj(lock.fields.map((f) => pdfText(f))));
+    const entry = ctx.obj({ Type: 'SigRef', TransformMethod: 'FieldMDP', TransformParams: params });
+    const refs = sigDict.lookupMaybe(PDFName.of('Reference'), PDFArray);
+    if (refs) refs.push(entry);
+    else sigDict.set(PDFName.of('Reference'), ctx.obj([entry]));
+  }
+
   // ---- field + widget ----
   const lines = [`Digitally signed by ${name}`, `Date: ${humanDate(date)}`];
   if (opts.reason) lines.push(`Reason: ${opts.reason}`);
@@ -127,6 +143,7 @@ export async function signPdf(bytes: Uint8Array, opts: SignOptions): Promise<Uin
         w.dict.set(PDFName.of('AP'), ctx.obj({ N: ap }));
       }
       w.dict.set(PDFName.of('F'), PDFNumber.of(132)); // Print | Locked
+      if (lockDict) f.acroField.dict.set(PDFName.of('Lock'), lockDict);
     }
   } else {
     const page = doc.getPage(opts.field.page);
@@ -150,6 +167,7 @@ export async function signPdf(bytes: Uint8Array, opts: SignOptions): Promise<Uin
       const ap = await buildAppearance(doc, { width: f.rect.width, height: f.rect.height }, f.geometry.rotation, f.appearance ?? { showText: true }, lines, f.rect, f.geometry);
       widget.set(PDFName.of('AP'), ctx.obj({ N: ap }));
     }
+    if (lockDict) widget.set(PDFName.of('Lock'), lockDict);
     const widgetRef = ctx.register(widget);
     fields.push(widgetRef);
     addAnnot(page, widgetRef);

@@ -24,7 +24,7 @@ import { EditGuard } from './signature/EditGuard';
 import { SignatureBadgeLayer, SignatureBanner, SignaturePanel } from './signature/verify/SignatureUI';
 import { IconButton } from './ui/common';
 import { IconSeal } from './ui/icons';
-import { useSignatures } from './signature/verify/useSignatures';
+import { lockedBy, useSignatures } from './signature/verify/useSignatures';
 
 function useFileDrop() {
   useEffect(() => {
@@ -80,7 +80,7 @@ export function App() {
         annotationMode={hasForm ? pdfjs.AnnotationMode.ENABLE_FORMS : pdfjs.AnnotationMode.ENABLE}
         renderOverlay={(info, zoom) => (
           <>
-            {hasForm && <FormLayer info={info} zoom={zoom} />}
+            {hasForm && <FormLayer info={info} zoom={zoom} lockedBy={(name) => lockedBy(useSignatures.getState().signatures, name)} />}
             <ObjectLayer info={info} zoom={zoom} />
             <FillLayer info={info} zoom={zoom} />
             <SignatureBadgeLayer info={info} zoom={zoom} />

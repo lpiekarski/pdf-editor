@@ -29,7 +29,7 @@ export function usePageWidgets(page: number): Widget[] {
 }
 
 /** HTML inputs over the page's AcroForm widgets. Values live in the editor store (undoable). */
-export function FormLayer({ info, zoom, signedLock }: { info: PageInfo; zoom: number; signedLock?: (name: string) => boolean }) {
+export function FormLayer({ info, zoom, lockedBy }: { info: PageInfo; zoom: number; lockedBy?: (name: string) => string | null }) {
   const widgets = usePageWidgets(info.index);
   const values = useEditor((s) => s.formValues);
   if (!widgets.length) return null;
@@ -39,11 +39,12 @@ export function FormLayer({ info, zoom, signedLock }: { info: PageInfo; zoom: nu
         if (w.kind === 'signature' || w.kind === 'button') return null;
         const r = pdfRectToView(info, zoom, { x: w.rect[0], y: w.rect[1], width: w.rect[2] - w.rect[0], height: w.rect[3] - w.rect[1] });
         const value: FormValue = values[w.name] ?? w.value;
-        const locked = w.readOnly || !!signedLock?.(w.name);
+        const lockOwner = lockedBy?.(w.name) ?? null;
+        const locked = w.readOnly || !!lockOwner;
         const fontPx = (w.fontSize || Math.min(12, Math.max(6, (r.height / zoom) * (w.multiline ? 0.35 : 0.68)))) * zoom;
         const style: CSSProperties = { left: r.x, top: r.y, width: r.width, height: r.height, fontSize: fontPx, textAlign: w.align };
         const set = (v: FormValue) => useEditor.getState().setFormValue(w.name, v);
-        const common = { className: `field field-${w.kind}${w.required ? ' required' : ''}`, style, disabled: locked, 'aria-label': w.name, 'data-field': w.name, title: w.name };
+        const common = { className: `field field-${w.kind}${w.required ? ' required' : ''}`, style, disabled: locked, 'aria-label': w.name, 'data-field': w.name, title: lockOwner ? `${w.name} — locked by the signature of ${lockOwner}` : w.name };
         switch (w.kind) {
           case 'text':
             if (w.multiline)

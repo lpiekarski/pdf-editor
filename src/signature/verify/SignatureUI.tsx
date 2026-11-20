@@ -157,6 +157,12 @@ export function SignatureCard({ s, compact = false }: { s: SignatureInfo; compac
           {s.level}
           {!compact && <span className="muted small"> ({s.subFilter}{s.digestAlgorithm ? `, ${s.digestAlgorithm}` : ''})</span>}
         </dd>
+        {s.fieldLock && (
+          <>
+            <dt>Locks</dt>
+            <dd>{s.fieldLock.action === 'All' ? 'All form fields' : s.fieldLock.action === 'Include' ? `Fields: ${s.fieldLock.fields.join(', ')}` : `All fields except: ${s.fieldLock.fields.join(', ')}`}</dd>
+          </>
+        )}
         <dt>Integrity</dt>
         <dd>
           {s.integrity === 'ok' ? 'The signed content is unchanged.' : s.integrity === 'mismatch' ? 'The signed content was altered.' : s.integrity === 'malformed' ? 'Malformed signature.' : 'Not checked.'}

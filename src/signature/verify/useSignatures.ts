@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useDoc } from '../../model/docStore';
-import { analyzeSignatures, type DocSignatures, type SignatureInfo } from './analyze';
+import { analyzeSignatures, isFieldLocked, type DocSignatures, type SignatureInfo } from './analyze';
 
 export type Status = 'valid' | 'warning' | 'invalid' | 'unknown';
 
@@ -18,6 +18,12 @@ interface SigState extends Partial<DocSignatures> {
 }
 
 export const useSignatures = create<SigState>(() => ({ loading: false, forBytes: null }));
+
+/** Name of the signer whose FieldMDP lock covers this form field, or null when it is editable. */
+export function lockedBy(signatures: SignatureInfo[] | undefined, field: string): string | null {
+  const s = signatures?.find((x) => isFieldLocked(x.fieldLock, field));
+  return s ? (s.signerName ?? 'a signer') : null;
+}
 
 /** Re-analyse whenever a different file is opened. */
 useDoc.subscribe(async (s, prev) => {

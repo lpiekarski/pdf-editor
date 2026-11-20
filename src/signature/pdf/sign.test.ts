@@ -93,3 +93,45 @@ describe.skipIf(!hasPython)('signPdf (validated with pyHanko)', () => {
     expect(s).toMatchObject({ field: 'ApproverSig', intact: true, valid: true });
   });
 });
+
+/** A form whose fields and widgets are merged dictionaries (as Acrobat writes them). */
+async function mergedForm(names: string[]) {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595, 842]);
+  const helv = await doc.embedFont(StandardFonts.Helvetica);
+  const ctx = doc.context;
+  const af = doc.catalog.getOrCreateAcroForm();
+  names.forEach((n, i) => {
+    const y = 700 - i * 40;
+    const field = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Widget', FT: 'Tx', T: PDFString.of(n), Rect: [100, y, 400, y + 24], F: 4, P: page.ref, DA: PDFString.of('/Helv 12 Tf 0 g') }));
+    page.node.addAnnot(field);
+    af.addField(field);
+  });
+  af.dict.set(PDFName.of('DR'), ctx.obj({ Font: { Helv: helv.ref } }));
+  return doc.save({ useObjectStreams: false });
+}
+
+describe.skipIf(!hasPython)('FieldMDP locks', () => {
+  it('flags a change to a locked field and allows changes to other fields', async () => {
+    const { analyzeSignatures } = await import('../verify/analyze');
+    const { signer } = await loadP12(p12, 'test');
+    const signed = await signPdf(await mergedForm(['name', 'city']), {
+      signer,
+      lockFields: { action: 'Include', fields: ['name'] },
+      field: { kind: 'new', page: 0, geometry: A4, rect: { x: 100, y: 300, width: 200, height: 50 } },
+    });
+    const before = (await analyzeSignatures(signed)).signatures[0];
+    expect(before.fieldLock).toEqual({ action: 'Include', fields: ['name'] });
+
+    const okEdit = await exportPdf({ bytes: signed, pages: [A4], objects: [], images: {}, formValues: { city: 'Gdańsk' } });
+    const ok = (await analyzeSignatures(okEdit)).signatures[0];
+    expect(ok).toMatchObject({ changesAllowed: true, changedFields: ['city'] });
+    expect(pyValidate('sigs', writeOut('lock-ok.pdf', okEdit), TEST_CA).signatures[0]).toMatchObject({ intact: true, valid: true, docmdp_ok: true });
+
+    const badEdit = await exportPdf({ bytes: signed, pages: [A4], objects: [], images: {}, formValues: { name: 'Changed' } });
+    const bad = (await analyzeSignatures(badEdit)).signatures[0];
+    expect(bad.changesAllowed).toBe(false);
+    expect(bad.errors.join(' ')).toContain('name');
+    expect(pyValidate('sigs', writeOut('lock-bad.pdf', badEdit), TEST_CA).signatures[0].bottom_line).toBe(false);
+  });
+});
