@@ -338,3 +338,5 @@ select.field { appearance: auto; }
 /* Let text selection pass through existing markup while a markup tool is active. */
 .object-layer[data-tool='highlight'] .obj-annot, .object-layer[data-tool='underline'] .obj-annot, .object-layer[data-tool='strikeout'] .obj-annot { pointer-events: none; }
 .annot-placeholder { width: 100%; height: 100%; border: 1px dashed #9ca3af; }
+.page-detail { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.page-detail canvas { position: absolute; }

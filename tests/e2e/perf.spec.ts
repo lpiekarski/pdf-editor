@@ -31,3 +31,18 @@ test('opens a 200-page document quickly and renders on demand', async ({ page },
   expect(jump).toBeLessThan(1500);
   expect(live).toBeLessThanOrEqual(6); // virtualised: only pages near the viewport keep canvases
 });
+
+test('stays sharp at high zoom with a full-resolution detail canvas', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile-iphone', 'covered by the Chromium projects');
+  await page.goto('/');
+  await page.setInputFiles('[data-testid=file-input]', 'tests/fixtures/flat-form.pdf');
+  await expect(page.locator('.page canvas').first()).toBeVisible();
+  // Zoom to the maximum: the whole page no longer fits the canvas pixel budget.
+  for (let i = 0; i < 14; i++) await page.getByRole('button', { name: 'Zoom in' }).click();
+  const detail = page.locator('.page[data-page="0"] .page-detail canvas');
+  await expect(detail).toBeVisible({ timeout: 10000 });
+  const density = await detail.evaluate((c: HTMLCanvasElement) => c.width / parseFloat(c.style.width) / (window.devicePixelRatio || 1));
+  expect(density).toBeGreaterThan(0.95); // full device resolution in the visible region
+  const base = await page.locator('.page[data-page="0"] .page-canvas canvas').evaluate((c: HTMLCanvasElement) => c.width / c.getBoundingClientRect().width / (window.devicePixelRatio || 1));
+  expect(base).toBeLessThan(0.95); // the full-page canvas is the reduced one
+});
