@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { openPdf, type PageInfo, type PDFDocumentProxy } from '../viewer/pdfjs';
 import { useEditor } from './editorStore';
+import type { EditorObject, StoredImage } from './types';
+import type { FormValue } from './editorStore';
+
+type EditorSnapshot = {
+  objects: Record<string, EditorObject>;
+  order: string[];
+  formValues: Record<string, FormValue>;
+  images: Record<string, StoredImage>;
+  past: unknown[];
+  future: unknown[];
+};
 import { hasAcroForm } from '../forms/acroform';
 
 export interface LoadedFile {
@@ -23,6 +34,10 @@ interface DocState {
   loading: boolean;
   error: string | null;
   passwordPrompt: PasswordPrompt | null;
+  /** Set while a read-only snapshot of a signed revision is shown. */
+  revisionOf: { label: string; name: string; bytes: Uint8Array; editor: EditorSnapshot } | null;
+  openRevision(bytes: Uint8Array, label: string): Promise<void>;
+  backToCurrent(): Promise<void>;
   open(name: string, bytes: Uint8Array): Promise<void>;
   close(): Promise<void>;
 }
@@ -35,9 +50,25 @@ export const useDoc = create<DocState>((set, get) => ({
   loading: false,
   error: null,
   passwordPrompt: null,
+  revisionOf: null,
+  async openRevision(bytes, label) {
+    const { file, revisionOf } = get();
+    if (!file) return;
+    const e = useEditor.getState();
+    const editor = revisionOf?.editor ?? { objects: e.objects, order: e.order, formValues: e.formValues, images: e.images, past: e.past, future: e.future };
+    const keep = revisionOf ?? { name: file.name, bytes: file.bytes };
+    await get().open(`${label} (signed version)`, bytes);
+    set({ revisionOf: { label, name: keep.name, bytes: keep.bytes, editor } });
+  },
+  async backToCurrent() {
+    const r = get().revisionOf;
+    if (!r) return;
+    await get().open(r.name, r.bytes);
+    useEditor.setState({ ...(r.editor as Partial<ReturnType<typeof useEditor.getState>>), dirty: r.editor.past.length > 0 });
+  },
   async open(name, bytes) {
     await get().close();
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, revisionOf: null });
     try {
       const { pdf, pages } = await openPdf(bytes, (incorrect) =>
         new Promise((resolve) =>

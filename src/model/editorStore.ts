@@ -208,7 +208,6 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   reset() {
-    for (const img of Object.values(get().images)) URL.revokeObjectURL(img.url);
     set({
       objects: {},
       order: [],

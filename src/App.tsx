@@ -19,6 +19,12 @@ import { FillLayer } from './forms/FillLayer';
 import { FillBar, FillToggle } from './forms/FillBar';
 import { SignatureDialog } from './signature/graphic/SignatureDialog';
 import { placeImage } from './editor/images';
+import { SignDialog } from './signature/SignDialog';
+import { EditGuard } from './signature/EditGuard';
+import { SignatureBadgeLayer, SignatureBanner, SignaturePanel } from './signature/verify/SignatureUI';
+import { IconButton } from './ui/common';
+import { IconShield } from './ui/icons';
+import './signature/verify/useSignatures';
 
 function useFileDrop() {
   useEffect(() => {
@@ -45,7 +51,7 @@ function useDeselectOnBackground() {
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest('.obj, .handle, .sel-frame, .text-editor, .note-popup, .inspector, .ctx-menu, .sheet, .modal, .topbar, .bottombar, .sidebar, .tool-popover, .floating-apply, .field, .hotspot, .fill-bar'))
+      if (t.closest('.obj, .handle, .sel-frame, .text-editor, .note-popup, .inspector, .ctx-menu, .sheet, .modal, .topbar, .bottombar, .sidebar, .tool-popover, .floating-apply, .field, .hotspot, .fill-bar, .sig-zone, .sig-banner'))
         return;
       const s = useEditor.getState();
       if (s.selection.length) s.select([]);
@@ -64,6 +70,7 @@ export function App() {
   useEditorShortcuts(hasDoc);
   useMarkupTool();
   const [sigOpen, setSigOpen] = useState(false);
+  const [signOpen, setSignOpen] = useState(false);
 
   const slots: ShellSlots = {
     viewer: (
@@ -75,6 +82,7 @@ export function App() {
             {hasForm && <FormLayer info={info} zoom={zoom} />}
             <ObjectLayer info={info} zoom={zoom} />
             <FillLayer info={info} zoom={zoom} />
+            <SignatureBadgeLayer info={info} zoom={zoom} />
           </>
         )}
       />
@@ -85,10 +93,19 @@ export function App() {
         <Tools onSignature={() => setSigOpen(true)} />
       </>
     ),
-    banner: <FillBar />,
+    banner: (
+      <>
+        <SignatureBanner />
+        <FillBar />
+      </>
+    ),
+    signatures: <SignaturePanel />,
     actions: (
       <>
         <UndoRedo />
+        <IconButton label="Sign digitally" onClick={() => setSignOpen(true)} showLabel={desktop} testId="sign">
+          <IconShield />
+        </IconButton>
         <SaveButton showLabel={desktop} />
       </>
     ),
@@ -101,6 +118,8 @@ export function App() {
       <ContextMenu />
       <MarkupApplyButton />
       <Toast />
+      <EditGuard />
+      {signOpen && <SignDialog onClose={() => setSignOpen(false)} />}
       {sigOpen && (
         <SignatureDialog
           onClose={() => setSigOpen(false)}

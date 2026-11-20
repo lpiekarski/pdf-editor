@@ -61,7 +61,7 @@ export function SignatureDialog({ onClose, onDone, title = 'Add signature' }: { 
     onDone({ ...png, kind });
   };
 
-  const useSaved = (s: SavedSignature) => {
+  const pickSaved = (s: SavedSignature) => {
     const blob = new Blob([s.png as BlobPart], { type: 'image/png' });
     const reader = new FileReader();
     reader.onload = () => onDone({ bytes: s.png, width: s.width, height: s.height, dataUrl: String(reader.result), kind: s.kind });
@@ -84,7 +84,7 @@ export function SignatureDialog({ onClose, onDone, title = 'Add signature' }: { 
           <div className="sig-saved">
             {saved?.map((s) => (
               <div key={s.id} className="sig-saved-item">
-                <button className="sig-saved-img" onClick={() => useSaved(s)} aria-label="Use this signature">
+                <button className="sig-saved-img" onClick={() => pickSaved(s)} aria-label="Use this signature">
                   <img src={URL.createObjectURL(new Blob([s.png as BlobPart], { type: 'image/png' }))} alt="Saved signature" />
                 </button>
                 <button

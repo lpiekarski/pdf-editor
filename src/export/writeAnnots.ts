@@ -59,7 +59,7 @@ export function writeMarkup(doc: PDFDocument, page: PDFPage, g: PageGeometry, o:
   const [r, gg, b] = o.color;
   const subtype = { highlight: 'Highlight', underline: 'Underline', strikeout: 'StrikeOut' }[o.kind];
 
-  let ops = '';
+  let ops: string;
   if (o.kind === 'highlight') {
     ops = `/GS0 gs ${r} ${gg} ${b} rg\n`;
     for (const [ul, ur, ll, lr] of quads) ops += `${f(ul.x)} ${f(ul.y)} m ${f(ur.x)} ${f(ur.y)} l ${f(lr.x)} ${f(lr.y)} l ${f(ll.x)} ${f(ll.y)} l h f\n`;

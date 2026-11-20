@@ -274,3 +274,49 @@ select.field { appearance: auto; }
   .modal { max-height: 100vh; }
   .draw-wrap { height: 55vh; }
 }
+
+/* ---------- signatures ---------- */
+.sig-banner { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 14px; border-bottom: 1px solid; }
+.sig-banner span:nth-child(2) { flex: 1; }
+.sig-banner.valid { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+.sig-banner.warning, .sig-banner.unknown { background: #fffbeb; border-color: #fde68a; color: #78350f; }
+.sig-banner.invalid { background: #fef2f2; border-color: #fecaca; color: #7f1d1d; }
+.sig-banner.info { background: #eef2ff; border-color: #c7d2fe; color: #312e81; }
+.mobile .sig-banner { font-size: 12px; padding: 6px 10px; }
+.mobile .sig-banner span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sig-badge { display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; }
+.sig-badge.valid { background: var(--ok); }
+.sig-badge.warning, .sig-badge.unknown { background: var(--warn); }
+.sig-badge.invalid { background: var(--danger); }
+.sig-badge-layer { position: absolute; inset: 0; pointer-events: none; }
+.sig-zone { position: absolute; pointer-events: none; outline: 2px solid transparent; border-radius: 2px; }
+.sig-zone.valid { outline-color: rgb(22 163 74 / 0.45); }
+.sig-zone.warning, .sig-zone.unknown { outline-color: rgb(217 119 6 / 0.5); }
+.sig-zone.invalid { outline-color: rgb(220 38 38 / 0.6); }
+.sig-zone-btn { position: absolute; top: -11px; right: -11px; padding: 0; border: none; background: none; pointer-events: auto; border-radius: 50%; box-shadow: 0 1px 3px rgb(0 0 0 / 0.3); }
+.sig-popover { position: absolute; top: 100%; right: 0; z-index: 6; width: min(320px, 80vw); margin-top: 6px; pointer-events: auto; box-shadow: 0 10px 30px rgb(0 0 0 / 0.2); border-radius: 10px; }
+.sig-panel { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+.sig-card { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.sig-card.valid { border-left-color: var(--ok); }
+.sig-card.warning, .sig-card.unknown { border-left-color: var(--warn); }
+.sig-card.invalid { border-left-color: var(--danger); }
+.sig-card-head { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.sig-status { font-size: 12px; font-weight: 600; }
+.sig-status.valid, .ok-text { color: var(--ok); }
+.sig-status.warning, .sig-status.unknown { color: var(--warn); }
+.sig-status.invalid, .error-text { color: var(--danger); }
+.sig-card dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; margin: 0; }
+.sig-card dt { color: var(--muted); }
+.sig-card dd { margin: 0; overflow-wrap: anywhere; }
+.sig-card-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; }
+.cert-chain { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.cert-chain li { display: flex; flex-direction: column; gap: 2px; }
+.small { font-size: 12px; }
+.pad { padding: 12px; }
+.cert-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel-2); border-radius: 8px; font-size: 14px; }
+.placement { border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; margin: 8px 0; }
+.placement legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.placement .check { margin: 6px 0; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
+.guard-list { padding-left: 18px; font-size: 14px; line-height: 1.5; }
