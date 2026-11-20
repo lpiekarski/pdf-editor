@@ -320,3 +320,13 @@ select.field { appearance: auto; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 500px) { .two-col { grid-template-columns: 1fr; } }
 .guard-list { padding-left: 18px; font-size: 14px; line-height: 1.5; }
+
+/* ---------- phone top bar ---------- */
+.page-indicator, .page-indicator span { white-space: nowrap; flex: none; }
+.topbar { min-width: 0; overflow: hidden; }
+@media (max-width: 440px) {
+  .mobile .doc-name { display: none; }
+  .mobile .page-indicator { margin-right: 2px; }
+  .mobile .page-indicator span { font-size: 12px; }
+  .mobile .topbar .icon-btn { min-width: 38px; padding: 0 4px; }
+}

@@ -86,3 +86,6 @@ export const IconSliders = (p: P) => (
 export const IconForm = (p: P) => (
   <svg {...base(p)}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 9h4M7 14h10" /></svg>
 );
+export const IconSeal = (p: P) => (
+  <svg {...base(p)}><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h5" /><path d="M14 3l5 5h-5z" /><circle cx="17" cy="15" r="3" /><path d="M15.5 17.6 15 22l2-1 2 1-.5-4.4" /></svg>
+);

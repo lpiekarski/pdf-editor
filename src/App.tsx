@@ -23,8 +23,8 @@ import { SignDialog } from './signature/SignDialog';
 import { EditGuard } from './signature/EditGuard';
 import { SignatureBadgeLayer, SignatureBanner, SignaturePanel } from './signature/verify/SignatureUI';
 import { IconButton } from './ui/common';
-import { IconShield } from './ui/icons';
-import './signature/verify/useSignatures';
+import { IconSeal } from './ui/icons';
+import { useSignatures } from './signature/verify/useSignatures';
 
 function useFileDrop() {
   useEffect(() => {
@@ -71,6 +71,7 @@ export function App() {
   useMarkupTool();
   const [sigOpen, setSigOpen] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
+  const hasSignatures = useSignatures((s) => (s.signatures?.length ?? 0) > 0);
 
   const slots: ShellSlots = {
     viewer: (
@@ -99,12 +100,13 @@ export function App() {
         <FillBar />
       </>
     ),
-    signatures: <SignaturePanel />,
+    // Desktop always offers the Signatures tab; phones show the button only when there is something to see.
+    signatures: desktop || hasSignatures ? <SignaturePanel /> : undefined,
     actions: (
       <>
         <UndoRedo />
         <IconButton label="Sign digitally" onClick={() => setSignOpen(true)} showLabel={desktop} testId="sign">
-          <IconShield />
+          <IconSeal />
         </IconButton>
         <SaveButton showLabel={desktop} />
       </>
