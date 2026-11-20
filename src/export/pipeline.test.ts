@@ -169,3 +169,25 @@ describe('keep as annotations', () => {
     }
   });
 });
+
+describe('deleting existing annotations', () => {
+  it('removes the annotation from the page and reports it as an annotation change after signing', async () => {
+    const bytes = new Uint8Array(readFileSync('tests/fixtures/annotated.pdf'));
+    const pages = await pagesOf(bytes);
+    const before = await textOf(bytes);
+    const hl = (before.annots as { subtype: string; id: string }[]).find((a) => a.subtype === 'Highlight')!;
+    const [num] = hl.id.split('R').map(Number);
+    const out = await exportPdf({ bytes, pages, objects: [], images, formValues: {}, removeAnnots: [{ page: 0, ref: { num, gen: 0 } }] });
+    expect((await textOf(out)).annots.map((a: { subtype: string }) => a.subtype)).toEqual(['Text']);
+
+    const { signPdf } = await import('../signature/pdf/sign');
+    const { loadP12 } = await import('../signature/cms/p12');
+    const { analyzeSignatures } = await import('../signature/verify/analyze');
+    const { signer } = await loadP12(new Uint8Array(readFileSync('tests/fixtures/certs/signer.p12')), 'test');
+    const signed = await signPdf(bytes, { signer, certify: 2, field: { kind: 'new', page: 0, geometry: pages[0], rect: null } });
+    const removed = await exportPdf({ bytes: signed, pages, objects: [], images, formValues: {}, removeAnnots: [{ page: 0, ref: { num, gen: 0 } }] });
+    const [s] = (await analyzeSignatures(removed)).signatures;
+    expect(s.changes).toEqual(['annotation']);
+    expect(s.changesAllowed).toBe(false); // P=2 does not allow annotation changes
+  });
+});

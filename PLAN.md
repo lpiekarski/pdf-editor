@@ -9,12 +9,19 @@ All 11 steps are implemented and covered by tests: 33 unit/integration tests, pl
 - PKCS#12 files are read with node-forge, because WebCrypto can't decrypt the legacy 3DES files that Windows exports. The key is then imported into WebCrypto as non-extractable. Only RSA keys are supported.
 - Field detection runs on pdf.js v6 operator lists (a new path encoding).
 
-**Not done yet:**
-- An export option to keep text/shapes as editable annotations (FreeText/Stamp/Square/Ink). They are always flattened.
-- Selecting and deleting annotations that already exist in a PDF (the `locked` flag exists, but existing annotations aren't loaded into the editor).
-- Enforcing FieldMDP field locks set by earlier signers. DocMDP is enforced.
-- Tiled re-rendering at very high zoom. Canvases are capped by pixel count instead, so deep zoom is softer.
-- Manual checks on real iPhone/Android devices and in Adobe Acrobat Reader.
+**Follow-up (same day): the earlier gaps are now done.**
+- Annotations already in a PDF can be selected and deleted. pdf.js hides deleted ones on screen, and they are removed from the page on save. Deleting one after signing is reported as an annotation change.
+- The save dialog can keep added text, shapes, drawings and images as editable annotations (FreeText, Square, Circle, Line, Ink, Stamp) with identical appearances.
+- FieldMDP locks are enforced:
+  - locks from earlier signers are read;
+  - locked fields are read-only in the editor;
+  - changes to them mark the signature as invalid;
+  - signing can lock all form fields.
+
+  The form writer now touches only fields whose value really changed.
+- At high zoom a full-resolution canvas re-renders the visible region.
+
+**Still not done:** checks on real iPhone/Android devices and in Adobe Acrobat Reader. These need hardware and software outside this environment.
 
 ## Context
 `C:\Users\lukasz\projects\pdf-editor` is empty except for `PLAN.md`, the earlier design notes. The goal is a **static, fully client-side web app** that works well in **desktop browsers and on phones**. It should:

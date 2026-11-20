@@ -152,3 +152,29 @@ test('undo and redo work for placed objects', async ({ page }) => {
   await page.getByTestId('redo').click();
   await expect(page.locator('.obj-mark')).toHaveCount(1);
 });
+
+test('deletes an annotation that was already in the PDF', async ({ page }) => {
+  await open(page, 'annotated.pdf');
+  await expect(page.locator('.obj-annot')).toHaveCount(2);
+  await page.locator('.obj-annot').first().click();
+  await page.keyboard.press('Delete');
+  await expect(page.locator('.obj-annot')).toHaveCount(1);
+  const out = await save(page, 'deleted-annot.pdf');
+  expect((await pageText(out)).annots).toEqual(['Text']);
+});
+
+test('can keep added objects editable as annotations', async ({ page }) => {
+  await open(page, 'flat-form.pdf');
+  await page.getByTestId('tool-text').click();
+  await clickOnPage(page, 300, 500);
+  await page.keyboard.type('Editable later');
+  await clickOnPage(page, 300, 780);
+  await page.getByTestId('save').click();
+  await page.getByTestId('keep-editable').check();
+  const download = page.waitForEvent('download');
+  await page.getByTestId('save-confirm').click();
+  const out = new Uint8Array(readFileSync(await (await download).path()));
+  const { text, annots } = await pageText(out);
+  expect(annots).toContain('FreeText');
+  expect(text).not.toContain('Editable later'); // not flattened into the page
+});

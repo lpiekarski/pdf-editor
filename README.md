@@ -7,6 +7,8 @@ A PDF editor that runs entirely in the browser — desktop and phone. Files are 
 **Editing (WYSIWYG)**
 - Add text in any of the bundled fonts (Noto Sans/Serif/Mono — full Polish/Latin-Extended support), images, rectangles, ellipses, lines, arrows, freehand drawing, white-out boxes and sticky notes.
 - Highlight, underline and strike out existing text. These are saved as real PDF annotations, so they stay editable in other readers.
+- Select and delete annotations that were already in the PDF.
+- Optionally save added objects as editable annotations instead of flattening them (save dialog).
 - Select, move, resize, rotate, duplicate, reorder and delete; undo/redo; keyboard shortcuts; long-press menu on touch screens.
 - On-screen text uses the same font files and the same line breaking as the exported PDF, so what you see is what you get.
 
@@ -19,13 +21,13 @@ A PDF editor that runs entirely in the browser — desktop and phone. Files are 
 - Graphical signature: draw (mouse, finger or stylus with pressure), type in a script font, or upload a photo (the paper background is removed automatically). Saved signatures stay on the device (IndexedDB).
 - Digital signature: PAdES-B-B (`ETSI.CAdES.detached`, SHA-256, signing-certificate-v2) with a `.p12`/`.pfx` certificate file. Modern AES files and legacy 3DES files (Windows exports) are both supported.
   - Visible signature: your handwritten signature plus name, date and reason. It can go in an existing empty signature field or a default box, or the signature can be invisible.
-  - Approval or certification signatures (DocMDP levels 1–3). Several signatures in one document.
+  - Approval or certification signatures (DocMDP levels 1–3), optionally locking all form fields (FieldMDP). Several signatures in one document.
 - Opening a signed PDF (from any tool) automatically:
   - shows a banner with the overall status;
   - puts badges on visible signature fields;
   - fills a signature panel with signer, times, reason/location, level, integrity, cryptographic validity, changes made after signing and whether they were allowed, the certificate chain (exportable) and any revocation data;
   - offers **View signed version**, which opens exactly what each signer signed.
-- Edit guard: on a signed file, changes are saved as incremental updates, so the signed revision stays intact. You are told which changes keep the signatures valid. Certified "no changes" documents are protected from edits.
+- Edit guard: on a signed file, changes are saved as incremental updates, so the signed revision stays intact. You are told which changes keep the signatures valid. Certified "no changes" documents are protected from edits, and fields locked by a signature are read-only.
 
 ## Limits (by design or for now)
 
