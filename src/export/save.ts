@@ -1,3 +1,4 @@
+import { deletedAnnots } from '../editor/existingAnnots';
 import { useDoc } from '../model/docStore';
 import { useEditor } from '../model/editorStore';
 import { exportPdf } from './pipeline';
@@ -8,7 +9,7 @@ export function suggestedName(name: string, suffix = '-edited') {
 }
 
 /** Builds the output PDF from the current document and editor state. */
-export async function buildOutput(opts: { flattenForms?: boolean } = {}): Promise<Uint8Array> {
+export async function buildOutput(opts: { flattenForms?: boolean; keepAsAnnotations?: boolean } = {}): Promise<Uint8Array> {
   const { file, pages } = useDoc.getState();
   if (!file) throw new Error('No document open');
   const s = useEditor.getState();
@@ -19,6 +20,8 @@ export async function buildOutput(opts: { flattenForms?: boolean } = {}): Promis
     images: s.images,
     formValues: s.formValues,
     flattenForms: opts.flattenForms,
+    removeAnnots: deletedAnnots(s),
+    keepAsAnnotations: opts.keepAsAnnotations,
   });
 }
 

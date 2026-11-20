@@ -334,6 +334,23 @@ export async function classifyChanges(signedBytes: Uint8Array, finalDoc: PDFDocu
   const oldCtx = old.context;
   const newCtx = finalDoc.context;
 
+  // Annotations removed from a page leave no changed annotation object behind, so compare the
+  // /Annots lists page by page.
+  const oldPages = old.getPages();
+  finalDoc.getPages().forEach((p, i) => {
+    const before = oldPages[i];
+    if (!before) return kinds.add('other');
+    const refs = (pg: typeof p) => (pg.node.lookup(PDFName.of('Annots')) instanceof PDFArray ? (pg.node.lookup(PDFName.of('Annots')) as PDFArray).asArray().map((r) => r.toString()) : []);
+    const now = new Set(refs(p));
+    for (const r of refs(before)) {
+      if (now.has(r)) continue;
+      const o = oldCtx.lookup(PDFRef.of(Number(r.split(' ')[0]), Number(r.split(' ')[1])));
+      const sub = o instanceof PDFDict ? o.get(PDFName.of('Subtype'))?.toString() : undefined;
+      kinds.add(sub === '/Widget' ? 'other' : 'annotation');
+    }
+  });
+  if (oldPages.length !== finalDoc.getPageCount()) kinds.add('other');
+
   for (const [ref, obj] of newCtx.enumerateIndirectObjects()) {
     const before = oldCtx.lookup(ref);
     if (before && fingerprint(before) === fingerprint(obj)) continue;

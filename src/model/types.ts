@@ -87,6 +87,18 @@ export interface NoteObject extends Base {
   color: Color;
 }
 
+/** An annotation that already existed in the PDF. pdf.js draws it; the editor can only delete it. */
+export interface AnnotObject extends Base {
+  kind: 'annot';
+  /** pdf.js annotation id, e.g. "12R". */
+  annotId: string;
+  ref: { num: number; gen: number };
+  subtype: string;
+  contents: string;
+  /** False when the PDF gives no appearance stream, so the editor must draw a stand-in. */
+  hasAppearance: boolean;
+}
+
 export type EditorObject =
   | TextObject
   | ImageObject
@@ -95,7 +107,8 @@ export type EditorObject =
   | WhiteoutObject
   | MarkObject
   | MarkupObject
-  | NoteObject;
+  | NoteObject
+  | AnnotObject;
 
 export type ObjectKind = EditorObject['kind'];
 

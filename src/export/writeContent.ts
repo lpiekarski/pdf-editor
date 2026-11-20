@@ -68,11 +68,15 @@ function svgAt(page: PDFPage, path: string, h: number, opts: Parameters<PDFPage[
   page.drawSvgPath(path, { x: 0, y: h, ...opts });
 }
 
-export async function drawObject(page: PDFPage, g: PageGeometry, o: EditorObject, res: ResourceCache) {
+/**
+ * Draws one object. By default it is placed on the page with its object matrix; pass
+ * `matrix: [1,0,0,1,0,0]` to draw it in its own local frame (used for annotation appearances).
+ */
+export async function drawObject(page: PDFPage, g: PageGeometry, o: EditorObject, res: ResourceCache, opts: { matrix?: Matrix } = {}) {
   const w = o.rect.width;
   const h = o.rect.height;
   const opacity = o.opacity ?? 1;
-  page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...objectMatrix(o, g)));
+  page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...(opts.matrix ?? objectMatrix(o, g))));
   try {
     switch (o.kind) {
       case 'text':

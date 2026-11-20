@@ -5,6 +5,8 @@ import { clampZoom, useView, MIN_ZOOM, MAX_ZOOM } from '../model/viewStore';
 import { PageView } from './PageView';
 import { viewSize } from './coords';
 import type { PageInfo } from './pdfjs';
+import { useEditor } from '../model/editorStore';
+import { deletedKeyForPage } from '../editor/existingAnnots';
 
 const PAD = 16;
 const GAP = 16;
@@ -20,6 +22,8 @@ export function Viewer({ renderOverlay, annotationMode }: Props) {
   const zoom = useView((s) => s.zoom);
   const scrollRequest = useView((s) => s.scrollRequest);
   const fitRequest = useView((s) => s.fitRequest);
+  const objects = useEditor((s) => s.objects);
+  const existingAnnots = useEditor((s) => s.existingAnnots);
   const ref = useRef<HTMLDivElement>(null);
   const pageEls = useRef<(HTMLDivElement | null)[]>([]);
   const [visible, setVisible] = useState<Set<number>>(new Set([0]));
@@ -154,6 +158,7 @@ export function Viewer({ renderOverlay, annotationMode }: Props) {
             zoom={zoom}
             visible={visible.has(info.index)}
             annotationMode={annotationMode}
+            renderKey={existingAnnots.length ? deletedKeyForPage(objects, existingAnnots, info.index) : ''}
             pageRef={(el) => {
               pageEls.current[info.index] = el;
             }}

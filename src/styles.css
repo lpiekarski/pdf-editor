@@ -330,3 +330,11 @@ select.field { appearance: auto; }
   .mobile .page-indicator span { font-size: 12px; }
   .mobile .topbar .icon-btn { min-width: 38px; padding: 0 4px; }
 }
+
+/* ---------- existing PDF annotations ---------- */
+.obj-annot { cursor: pointer; }
+.obj-annot-hit { width: 100%; height: 100%; }
+.obj-annot:hover { outline: 1px dashed rgb(37 99 235 / 0.6); }
+/* Let text selection pass through existing markup while a markup tool is active. */
+.object-layer[data-tool='highlight'] .obj-annot, .object-layer[data-tool='underline'] .obj-annot, .object-layer[data-tool='strikeout'] .obj-annot { pointer-events: none; }
+.annot-placeholder { width: 100%; height: 100%; border: 1px dashed #9ca3af; }

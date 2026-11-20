@@ -181,7 +181,18 @@ export function Inspector() {
           </div>
         </>
       )}
-      {selected.some((o) => o.locked) && <p className="muted">Existing annotations from the file can only be deleted.</p>}
+      {selected.some((o) => o.locked) && (
+        <>
+          <p className="muted">Annotations that were already in the file can only be deleted.</p>
+          {editable.length === 0 && (
+            <div className="insp-actions">
+              <button className="danger" onClick={() => useEditor.getState().remove(selected.map((o) => o.id))}>
+                <IconTrash width={16} height={16} /> Delete
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

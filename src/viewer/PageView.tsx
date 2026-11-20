@@ -19,6 +19,8 @@ interface Props {
   visible: boolean;
   /** pdf.js AnnotationMode used for the canvas (forms may be drawn as HTML instead). */
   annotationMode?: number;
+  /** Changes when the canvas must be redrawn although nothing else changed (e.g. a PDF annotation was deleted). */
+  renderKey?: string;
   /** Overlay layers (forms, editor objects, signature badges) drawn above the text layer. */
   children?: ReactNode;
   pageRef?: (el: HTMLDivElement | null) => void;
@@ -32,7 +34,7 @@ function releaseCanvases(host: HTMLElement) {
   host.replaceChildren();
 }
 
-export function PageView({ pdf, info, zoom, visible, annotationMode, children, pageRef }: Props) {
+export function PageView({ pdf, info, zoom, visible, annotationMode, renderKey, children, pageRef }: Props) {
   const canvasHost = useRef<HTMLDivElement>(null);
   const textHost = useRef<HTMLDivElement>(null);
   const rendered = useRef(false);
@@ -82,7 +84,8 @@ export function PageView({ pdf, info, zoom, visible, annotationMode, children, p
       clearTimeout(timer);
       task?.cancel();
     };
-  }, [pdf, info, zoom, visible, mode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdf, info, zoom, visible, mode, renderKey]);
 
   // Text layer (selectable text, used for highlighting and snapping).
   useEffect(() => {

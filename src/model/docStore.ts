@@ -13,6 +13,7 @@ type EditorSnapshot = {
   future: unknown[];
 };
 import { hasAcroForm } from '../forms/acroform';
+import { installExistingAnnots, loadExistingAnnots } from '../editor/existingAnnots';
 
 export interface LoadedFile {
   name: string;
@@ -80,6 +81,11 @@ export const useDoc = create<DocState>((set, get) => ({
       hasAcroForm(pdf).then((hasForm) => {
         if (hasForm && get().pdf === pdf) set({ hasForm });
       });
+      loadExistingAnnots(pdf, pages)
+        .then((annots) => {
+          if (get().pdf === pdf) installExistingAnnots(pdf, annots);
+        })
+        .catch(() => {});
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : String(e) });
     }

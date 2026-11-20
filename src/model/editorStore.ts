@@ -38,6 +38,8 @@ interface EditorState extends Snapshot {
   /** Merge key of the last history entry (consecutive edits with the same key collapse). */
   lastMerge: { key: string; at: number } | null;
   dirty: boolean;
+  /** ids of annotations imported from the PDF (deleted = imported but no longer in `objects`). */
+  existingAnnots: string[];
 
   setTool(tool: ToolId, locked?: boolean): void;
   select(ids: string[]): void;
@@ -97,6 +99,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   future: [],
   lastMerge: null,
   dirty: false,
+  existingAnnots: [],
 
   setTool: (tool, locked = false) => set({ tool, toolLocked: locked, selection: [], editingId: null }),
   select: (ids) => set((s) => ({ selection: ids, editingId: s.editingId && ids.includes(s.editingId) ? s.editingId : null })),
@@ -220,6 +223,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       lastMerge: null,
       dirty: false,
       tool: 'select',
+      existingAnnots: [],
     });
   },
 }));

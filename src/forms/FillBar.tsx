@@ -1,3 +1,4 @@
+import { deletedAnnots } from '../editor/existingAnnots';
 import { useEffect, useState } from 'react';
 import { useDoc } from '../model/docStore';
 import { useEditor } from '../model/editorStore';
@@ -53,6 +54,7 @@ export function FillBar() {
         images: s.images,
         formValues: s.formValues,
         createFields: found,
+        removeAnnots: deletedAnnots(s),
       });
       useFill.getState().toggle(false);
       await useDoc.getState().open(file.name.replace(/\.pdf$/i, '') + '-fillable.pdf', bytes);

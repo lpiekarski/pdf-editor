@@ -10,10 +10,11 @@ import type { FormValue } from '../model/editorStore';
 import type { PageGeometry } from '../viewer/coords';
 import { IncrementalUpdate } from '../pdf/incremental';
 import { drawObject, prepareFreshContentStream, ResourceCache } from './writeContent';
-import { writeMarkup, writeNote } from './writeAnnots';
+import { writeMarkup, writeNote, writeObjectAnnotation } from './writeAnnots';
 import { applyFormValues } from '../forms/acroform';
 import { createFieldsFromDetected } from '../forms/convert';
 import type { DetectedField } from '../forms/detect';
+import { PDFArray, PDFDict, PDFName, PDFRef } from 'pdf-lib';
 
 export interface ExportInput {
   bytes: Uint8Array;
@@ -25,6 +26,10 @@ export interface ExportInput {
   flattenForms?: boolean;
   /** Detected blanks to turn into real AcroForm fields. */
   createFields?: DetectedField[];
+  /** Annotations that were in the file and the user deleted. */
+  removeAnnots?: { page: number; ref: { num: number; gen: number } }[];
+  /** Save added text/shapes/drawings/images as editable annotations instead of flattening them. */
+  keepAsAnnotations?: boolean;
 }
 
 const CONTENT_KINDS = new Set(['text', 'image', 'shape', 'ink', 'whiteout', 'mark']);
@@ -40,6 +45,22 @@ export async function exportPdf(input: ExportInput): Promise<Uint8Array> {
 
   if (input.createFields?.length) await createFieldsFromDetected(doc, input.createFields, input.pages, res);
 
+  for (const r of input.removeAnnots ?? []) {
+    const page = doc.getPage(r.page);
+    const annots = page.node.lookup(PDFName.of('Annots'));
+    if (!(annots instanceof PDFArray)) continue;
+    const isTarget = (x: unknown) => x instanceof PDFRef && x.objectNumber === r.ref.num && x.generationNumber === r.ref.gen;
+    const idx = annots.asArray().findIndex(isTarget);
+    if (idx < 0) continue;
+    const dict = doc.context.lookup(annots.get(idx));
+    const popup = dict instanceof PDFDict ? dict.get(PDFName.of('Popup')) : undefined;
+    annots.remove(idx);
+    if (popup instanceof PDFRef) {
+      const p = annots.asArray().findIndex((x) => x === popup);
+      if (p >= 0) annots.remove(p);
+    }
+  }
+
   const byPage = new Map<number, EditorObject[]>();
   for (const o of input.objects) {
     if (o.locked) continue;
@@ -52,7 +73,9 @@ export async function exportPdf(input: ExportInput): Promise<Uint8Array> {
     const page = doc.getPage(index);
     const g = input.pages[index];
     const content = objs.filter((o) => CONTENT_KINDS.has(o.kind));
-    if (content.length) {
+    if (content.length && input.keepAsAnnotations) {
+      for (const o of content) await writeObjectAnnotation(doc, page, g, o, res);
+    } else if (content.length) {
       prepareFreshContentStream(doc, page);
       for (const o of content) await drawObject(page, g, o, res);
     }

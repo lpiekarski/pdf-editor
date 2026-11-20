@@ -139,3 +139,33 @@ describe('make fillable', () => {
     if (hasPython) expect(pyValidate('check', writeOut('fillable.pdf', out)).ok).toBe(true);
   });
 });
+
+describe('keep as annotations', () => {
+  it('saves added objects as standard annotations with appearances, on normal and rotated pages', async () => {
+    for (const [file, pageIdx] of [['flat-form.pdf', 0], ['multipage-rotated.pdf', 1]] as const) {
+      const bytes = new Uint8Array(readFileSync(`tests/fixtures/${file}`));
+      const objects: EditorObject[] = [
+        textObj(pageIdx, 130, 98, 'Edytowalny tekst'),
+        { ...base, id: 'i', kind: 'image', page: pageIdx, imageId: 'img1', rect: { x: 130, y: 420, width: 100, height: 40 } },
+        { ...base, id: 's', kind: 'shape', shape: 'rect', page: pageIdx, rect: { x: 300, y: 600, width: 80, height: 40 }, stroke: [1, 0, 0], fill: [0, 1, 0], strokeWidth: 2 },
+        { ...base, id: 'c', kind: 'shape', shape: 'ellipse', page: pageIdx, rect: { x: 300, y: 500, width: 80, height: 40 }, stroke: [1, 0, 0], fill: null, strokeWidth: 2 },
+        { ...base, id: 'a', kind: 'shape', shape: 'arrow', page: pageIdx, rect: { x: 300, y: 660, width: 80, height: 40 }, stroke: [0, 0, 1], fill: null, strokeWidth: 2, from: { x: 0.1, y: 0.1 }, to: { x: 0.9, y: 0.9 } },
+        { ...base, id: 'k', kind: 'ink', page: pageIdx, rect: { x: 50, y: 700, width: 100, height: 50 }, color: [0, 0, 0.5], width: 2, paths: [[{ x: 5, y: 5 }, { x: 50, y: 40 }, { x: 95, y: 10 }]] },
+        { ...base, id: 'w', kind: 'whiteout', page: pageIdx, rect: { x: 400, y: 50, width: 100, height: 20 }, color: [1, 1, 1] },
+        { ...base, id: 'm', kind: 'mark', mark: 'check', page: pageIdx, rect: { x: 50, y: 300, width: 12, height: 12 }, color: [0, 0, 0] },
+      ];
+      const out = await exportPdf({ bytes, pages: await pagesOf(bytes), objects, images, formValues: {}, keepAsAnnotations: true });
+      const task = getDocument({ data: out.slice() });
+      const pdf = await task.promise;
+      const page = await pdf.getPage(pageIdx + 1);
+      const annots = (await page.getAnnotations()) as { subtype: string; hasAppearance: boolean; contentsObj: { str: string } }[];
+      expect(annots.map((a) => a.subtype).sort()).toEqual(['Circle', 'FreeText', 'Ink', 'Line', 'Square', 'Square', 'Stamp', 'Stamp']);
+      expect(annots.every((a) => a.hasAppearance)).toBe(true);
+      expect(annots.find((a) => a.subtype === 'FreeText')!.contentsObj.str).toBe('Edytowalny tekst');
+      // Nothing was flattened into the page content.
+      expect(((await page.getTextContent()).items as { str: string }[]).some((i) => i.str.includes('Edytowalny'))).toBe(false);
+      await task.destroy();
+      if (hasPython) expect(pyValidate('check', writeOut(`annots-${file}`, out)).ok).toBe(true);
+    }
+  });
+});

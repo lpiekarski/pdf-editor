@@ -24,6 +24,8 @@ function SaveDialog({ onClose }: { onClose(): void }) {
   const hasWhiteout = useEditor((s) => Object.values(s.objects).some((o) => o.kind === 'whiteout'));
   const [name, setName] = useState(suggestedName(file?.name ?? 'document.pdf'));
   const [flatten, setFlatten] = useState(false);
+  const hasAdded = useEditor((s) => Object.values(s.objects).some((o) => ['text', 'image', 'shape', 'ink', 'whiteout', 'mark'].includes(o.kind)));
+  const [keepEditable, setKeepEditable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ function SaveDialog({ onClose }: { onClose(): void }) {
     setBusy(true);
     setError(null);
     try {
-      const bytes = await buildOutput({ flattenForms: flatten });
+      const bytes = await buildOutput({ flattenForms: flatten, keepAsAnnotations: keepEditable });
       const how = await saveBytes(bytes, /\.pdf$/i.test(name) ? name : `${name}.pdf`);
       if (how) {
         useEditor.setState({ dirty: false });
@@ -55,6 +57,12 @@ function SaveDialog({ onClose }: { onClose(): void }) {
         <label className="check">
           <input type="checkbox" checked={flatten} onChange={(e) => setFlatten(e.target.checked)} />
           <span>Flatten form fields (values become part of the page and can no longer be edited)</span>
+        </label>
+      )}
+      {hasAdded && (
+        <label className="check">
+          <input type="checkbox" checked={keepEditable} onChange={(e) => setKeepEditable(e.target.checked)} data-testid="keep-editable" />
+          <span>Keep added text, shapes, drawings and images editable in other PDF apps (saved as annotations instead of becoming part of the page)</span>
         </label>
       )}
       {hasWhiteout && (

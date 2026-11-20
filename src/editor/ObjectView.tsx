@@ -112,6 +112,13 @@ export function ObjectBody({ o, zoom }: { o: EditorObject; zoom: number }) {
           ))}
         </svg>
       );
+    case 'annot':
+      // pdf.js draws the annotation itself; this box only makes it selectable.
+      return (
+        <div className="obj-annot-hit" title={o.contents ? `${o.subtype}: ${o.contents}` : o.subtype}>
+          {!o.hasAppearance && (o.subtype === 'Text' ? <NoteIcon color={[1, 0.85, 0.3]} /> : <div className="annot-placeholder" />)}
+        </div>
+      );
     case 'highlight':
     case 'underline':
     case 'strikeout':

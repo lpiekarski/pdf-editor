@@ -1,3 +1,4 @@
+import { deletedAnnots } from '../editor/existingAnnots';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '../ui/common';
 import { useDoc } from '../model/docStore';
@@ -87,6 +88,7 @@ export function SignDialog({ onClose }: { onClose(): void }) {
         objects: st.order.map((id) => st.objects[id]).filter((o) => o && o.id !== usedImage?.id),
         images: st.images,
         formValues: st.formValues,
+        removeAnnots: deletedAnnots(st),
       });
       // 2. Sign.
       let field: SignField;

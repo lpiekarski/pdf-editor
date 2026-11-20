@@ -2,10 +2,10 @@
  * Writes highlight/underline/strikeout and sticky notes as real PDF annotations (with appearance
  * streams), so they stay editable in other PDF readers.
  */
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFPage, PDFRef, PDFString } from 'pdf-lib';
-import type { MarkupObject, NoteObject } from '../model/types';
+import { PDFArray, PDFContentStream, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFPage, PDFRef, PDFString } from 'pdf-lib';
+import type { Color, EditorObject, MarkupObject, NoteObject } from '../model/types';
 import type { PageGeometry, Point, Rect } from '../viewer/coords';
-import { viewToPdfPoint } from './writeContent';
+import { drawObject, objectMatrix, viewToPdfPoint, type ResourceCache } from './writeContent';
 
 const f = (n: number) => Number(n.toFixed(3));
 
@@ -116,5 +116,89 @@ export function writeNote(doc: PDFDocument, page: PDFPage, g: PageGeometry, o: N
     AP: { N: ap },
   });
   dict.set(PDFName.of('Contents'), pdfText(o.text));
+  addAnnot(doc, page, dict);
+}
+
+// ---------------- added objects as editable annotations ----------------
+
+/**
+ * Writes a text box / shape / drawing / image as a standard annotation (FreeText, Square, Circle,
+ * Line, Ink, Stamp) instead of flattening it into the page. Its appearance stream is drawn by the
+ * same code as the flattened version, so it looks identical; other PDF apps can move, edit or
+ * delete it.
+ */
+export async function writeObjectAnnotation(doc: PDFDocument, page: PDFPage, g: PageGeometry, o: EditorObject, res: ResourceCache) {
+  const ctx = doc.context;
+  const w = o.rect.width;
+  const h = o.rect.height;
+  const m = objectMatrix(o, g);
+  const toPdf = (x: number, y: number) => ({ x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] });
+  const rect = bbox([toPdf(0, 0), toPdf(w, 0), toPdf(0, h), toPdf(w, h)]).map(f);
+
+  // Draw on a detached scratch page, then turn its content + resources into a Form XObject.
+  const scratch = PDFPage.create(doc);
+  await drawObject(scratch, g, o, res, { matrix: [1, 0, 0, 1, 0, 0] });
+  const contents = scratch.node.Contents();
+  const parts: Uint8Array[] = [];
+  for (const r of contents instanceof PDFArray ? contents.asArray() : []) {
+    const st = ctx.lookup(r);
+    if (st instanceof PDFContentStream) parts.push(st.getUnencodedContents());
+    if (r instanceof PDFRef) ctx.delete(r);
+  }
+  const body = new Uint8Array(parts.reduce((n, p) => n + p.length + 1, 0));
+  let off = 0;
+  for (const p of parts) {
+    body.set(p, off);
+    body[off + p.length] = 0x0a;
+    off += p.length + 1;
+  }
+  const resources = scratch.node.Resources() ?? ctx.obj({});
+  ctx.delete(scratch.ref);
+  const ap = ctx.register(
+    ctx.flateStream(body, { Type: 'XObject', Subtype: 'Form', BBox: [0, 0, w, h], Matrix: m.map(f), Resources: resources }),
+  );
+
+  const base = { Type: 'Annot', Rect: rect, F: 4, P: page.ref, M: PDFString.of(pdfDate()), NM: PDFString.of(`ed-${o.id}`), AP: { N: ap } };
+  const color = (c: Color | null | undefined) => (c ? [c[0], c[1], c[2]] : []);
+  let dict: PDFDict;
+  switch (o.kind) {
+    case 'text':
+      dict = ctx.obj({ ...base, Subtype: 'FreeText', DA: PDFString.of(`/Helv ${o.size} Tf ${o.color.join(' ')} rg`), Q: { left: 0, center: 1, right: 2 }[o.align] });
+      dict.set(PDFName.of('Contents'), pdfText(o.text));
+      break;
+    case 'shape':
+      if (o.shape === 'line' || o.shape === 'arrow') {
+        const a = toPdf((o.from?.x ?? 0) * w, h - (o.from?.y ?? 0) * h);
+        const b = toPdf((o.to?.x ?? 1) * w, h - (o.to?.y ?? 1) * h);
+        dict = ctx.obj({
+          ...base,
+          Subtype: 'Line',
+          L: [a.x, a.y, b.x, b.y].map(f),
+          LE: ['None', o.shape === 'arrow' ? 'OpenArrow' : 'None'],
+          C: color(o.stroke),
+          BS: { W: o.strokeWidth },
+        });
+      } else {
+        dict = ctx.obj({ ...base, Subtype: o.shape === 'rect' ? 'Square' : 'Circle', C: color(o.stroke), BS: { W: o.stroke ? o.strokeWidth : 0 } });
+        if (o.fill) dict.set(PDFName.of('IC'), ctx.obj(color(o.fill)));
+      }
+      break;
+    case 'ink': {
+      const inkList = o.paths.map((path) =>
+        path.flatMap((p) => {
+          const q = toPdf(p.x, h - p.y);
+          return [f(q.x), f(q.y)];
+        }),
+      );
+      dict = ctx.obj({ ...base, Subtype: 'Ink', InkList: inkList, C: color(o.color), BS: { W: o.width } });
+      break;
+    }
+    case 'whiteout':
+      dict = ctx.obj({ ...base, Subtype: 'Square', C: color(o.color), IC: color(o.color), BS: { W: 0 } });
+      break;
+    default: // image, mark
+      dict = ctx.obj({ ...base, Subtype: 'Stamp', Name: o.kind === 'image' && o.signature ? 'Signature' : 'Image' });
+  }
+  if (o.opacity < 1) dict.set(PDFName.of('CA'), PDFNumber.of(o.opacity));
   addAnnot(doc, page, dict);
 }
