@@ -8,15 +8,13 @@
  * and only the objects that actually changed are written.
  */
 import { PDFDocument, PDFDict, PDFName, PDFNumber, PDFObjectParser, PDFRef, PDFStream, PDFArray, PDFHexString, PDFRawStream, PDFContext, type PDFObject } from 'pdf-lib';
+import { loadPdf, mapStrings, streamIsExempt } from './load';
+import type { PdfCrypt } from './crypt';
 
 const enc = new TextEncoder();
 const latin1 = new TextDecoder('latin1');
 
-export class EncryptedPdfError extends Error {
-  constructor() {
-    super('Encrypted PDFs cannot be modified or signed in this version.');
-  }
-}
+export { WrongPasswordError } from './crypt';
 
 function fnv1a(bytes: Uint8Array): number {
   let h = 0x811c9dc5;
@@ -100,16 +98,18 @@ export class IncrementalUpdate {
     }
   }
 
-  static async load(bytes: Uint8Array): Promise<IncrementalUpdate> {
-    let doc: PDFDocument;
-    try {
-      doc = await PDFDocument.load(bytes, { updateMetadata: false, throwOnInvalidObject: false });
-    } catch (e) {
-      if (e instanceof Error && /encrypted/i.test(e.message)) throw new EncryptedPdfError();
-      throw e;
-    }
-    if (doc.context.trailerInfo.Encrypt) throw new EncryptedPdfError();
-    return new IncrementalUpdate(bytes, doc, readLastXref(bytes, doc.context));
+  /** The file's encryption (null for unencrypted files). Appended objects are encrypted with it. */
+  crypt: PdfCrypt | null = null;
+
+  /**
+   * Loads a PDF for incremental editing. Encrypted files are decrypted in memory with `password`
+   * (empty for files that only restrict permissions) and stay encrypted when saved.
+   */
+  static async load(bytes: Uint8Array, password = ''): Promise<IncrementalUpdate> {
+    const { doc, crypt } = await loadPdf(bytes, password);
+    const up = new IncrementalUpdate(bytes, doc, readLastXref(bytes, doc.context));
+    up.crypt = crypt;
+    return up;
   }
 
   get context() {
@@ -151,7 +151,18 @@ export class IncrementalUpdate {
     const offsets = new Map<string, number>();
     const entries: { num: number; gen: number; offset: number }[] = [];
     for (const ref of changed) {
-      const obj = ctx.lookup(ref)!;
+      const plain = ctx.lookup(ref)!;
+      const crypt = this.crypt;
+      const n = ref.objectNumber;
+      const g = ref.generationNumber;
+      const obj = crypt
+        ? mapStrings(
+            plain,
+            ctx,
+            (b) => crypt.encryptString(b, n, g),
+            (b, st) => (streamIsExempt(st, crypt) ? b : crypt.encryptStream(b, n, g)),
+          )
+        : plain;
       const offset = pos;
       push(enc.encode(`${ref.objectNumber} ${ref.generationNumber} obj\n`));
       push(serialize(obj));
@@ -165,6 +176,8 @@ export class IncrementalUpdate {
     if (trailer.Root) trailerEntries.push(['Root', trailer.Root]);
     if (trailer.Info) trailerEntries.push(['Info', trailer.Info]);
     if (trailer.ID) trailerEntries.push(['ID', trailer.ID]);
+    // Keep the file encrypted: the new trailer must point at the same encryption dictionary.
+    if (trailer.Encrypt) trailerEntries.push(['Encrypt', trailer.Encrypt]);
 
     if (this.prev.kind === 'table') {
       const size = Math.max(this.prev.size, ...entries.map((e) => e.num + 1));

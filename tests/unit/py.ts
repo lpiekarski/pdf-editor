@@ -15,9 +15,9 @@ export function writeOut(name: string, bytes: Uint8Array): string {
   return p;
 }
 
-export function pyValidate(cmd: 'check' | 'sigs', file: string, trust?: string): any {
+export function pyValidate(cmd: 'check' | 'sigs', file: string, trust?: string, password = ''): any {
   const args = ['tools/validate.py', cmd, file, ...(trust ? [trust] : [])];
-  return JSON.parse(execFileSync(python!, args, { encoding: 'utf8' }));
+  return JSON.parse(execFileSync(python!, args, { encoding: 'utf8', env: { ...process.env, PDF_PASSWORD: password } }));
 }
 
 export const TEST_CA = 'tests/fixtures/certs/ca.crt';

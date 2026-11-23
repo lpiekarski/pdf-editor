@@ -5,7 +5,8 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { IncrementalUpdate, readLastXref } from './incremental';
 import { hasPython, pyValidate, writeOut, TEST_CA } from '../../tests/unit/py';
 
-const fixtures = readdirSync('tests/fixtures').filter((f) => f.endsWith('.pdf') && !f.startsWith('tampered'));
+// (The password-protected fixture is covered by crypt.test.ts.)
+const fixtures = readdirSync('tests/fixtures').filter((f) => f.endsWith('.pdf') && !f.startsWith('tampered') && !f.includes('password'));
 
 async function addNote(bytes: Uint8Array) {
   const up = await IncrementalUpdate.load(bytes);

@@ -9,11 +9,15 @@ import json
 import sys
 
 
+PASSWORD = __import__("os").environ.get("PDF_PASSWORD", "")
+
+
 def check(path):
     import pikepdf
-    with pikepdf.open(path) as pdf:
+    with pikepdf.open(path, password=PASSWORD) as pdf:
         problems = pdf.check_pdf_syntax()
-        return {"ok": not problems, "problems": [str(p) for p in problems], "pages": len(pdf.pages)}
+        return {"ok": not problems, "problems": [str(p) for p in problems], "pages": len(pdf.pages),
+                "encrypted": pdf.is_encrypted, "fields": [str(f.get("/T", "")) for f in pdf.Root.get("/AcroForm", {}).get("/Fields", [])]}
 
 
 def sigs(path, trust=None):
@@ -26,6 +30,8 @@ def sigs(path, trust=None):
     out = []
     with open(path, "rb") as f:
         r = PdfFileReader(f, strict=False)
+        if r.encrypted:
+            r.decrypt(PASSWORD)
         for emb in r.embedded_signatures:
             st = validate_pdf_signature(emb, vc)
             out.append({
