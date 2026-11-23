@@ -26,7 +26,7 @@ jobs:
       - run: python -m venv .venv && .venv/bin/pip install -q "pyhanko[opentype]" pyhanko-certvalidator pikepdf
       - run: npx tsc -b && npx eslint src
       - run: npm test
-      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright install --with-deps chromium webkit firefox
       - run: npm run e2e
       - uses: actions/upload-artifact@v7
         if: failure()

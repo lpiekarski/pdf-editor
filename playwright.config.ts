@@ -7,6 +7,8 @@ export default defineConfig({
   webServer: { command: 'npm run build && npm run preview -- --port 4173', port: 4173, reuseExistingServer: true, timeout: 180000 },
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'desktop-firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'desktop-safari', use: { ...devices['Desktop Safari'] } },
     { name: 'mobile-pixel', use: { ...devices['Pixel 7'] } },
     { name: 'mobile-iphone', use: { ...devices['iPhone 14'] } },
   ],

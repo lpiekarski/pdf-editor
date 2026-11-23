@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import 'pdfjs-dist/web/pdf_viewer.css';
+import 'pdfjs-dist/legacy/web/pdf_viewer.css';
 import { openFile, useDoc } from './model/docStore';
 import { useEditor } from './model/editorStore';
 import { Viewer } from './viewer/Viewer';

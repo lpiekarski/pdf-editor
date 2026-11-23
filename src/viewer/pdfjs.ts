@@ -1,6 +1,8 @@
-import * as pdfjs from 'pdfjs-dist';
-import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+// The legacy build includes fallbacks for very new JS APIs (Map.getOrInsertComputed, Math.sumPrecise…)
+// that the modern build calls directly; without it PDFs fail to open on older Safari, Chrome and Firefox.
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import type { PageGeometry } from './coords';
 import { normalizeRotation } from './coords';
 
