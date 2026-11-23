@@ -214,3 +214,46 @@ test('text box: clicking inside while editing keeps editing', async ({ page }) =
   await page.keyboard.type('Say ');
   await expect(page.locator('.text-editor')).toHaveValue('Say Hello');
 });
+
+test('fills a restricted encrypted PDF and keeps it encrypted', async ({ page }) => {
+  await open(page, 'enc-aes256.pdf');
+  await expect(page.getByTestId('restriction-banner')).toContainText('editing the content');
+  await page.locator('input[data-field=name]').fill('Szyfrowany Łukasz');
+  const out = await save(page, 'encrypted-filled.pdf');
+  const text = new TextDecoder('latin1').decode(out);
+  expect(text).toContain('/Encrypt');
+  expect(text).not.toContain('Szyfrowany');
+  const { loadPdf } = await import('../../src/pdf/load');
+  const { doc } = await loadPdf(out, '');
+  expect(doc.getForm().getTextField('name').getText()).toBe('Szyfrowany Łukasz');
+});
+
+test('opens a password-protected PDF, edits and signs it', async ({ page }) => {
+  await page.goto('/');
+  await page.setInputFiles('[data-testid=file-input]', `${FIX}/enc-aes256-password.pdf`);
+  await page.getByLabel('Password', { exact: true }).fill('secret');
+  await page.getByRole('dialog').getByRole('button', { name: 'Open', exact: true }).click();
+  await expect(page.locator('.page canvas').first()).toBeVisible({ timeout: 20000 });
+
+  await page.getByTestId('tool-text').click();
+  await clickOnPage(page, 300, 500);
+  await page.keyboard.type('Tajne');
+  await clickOnPage(page, 300, 780);
+
+  await page.getByTestId('sign').click();
+  await page.setInputFiles('[data-testid=p12-input]', `${FIX}/certs/signer.p12`);
+  await page.getByTestId('p12-password').fill('test');
+  await page.getByTestId('p12-unlock').click();
+  const download = page.waitForEvent('download');
+  await page.getByTestId('sign-confirm').click();
+  const bytes = new Uint8Array(readFileSync(await (await download).path()));
+  // Reopened automatically with the same password, no second prompt.
+  await expect(page.getByTestId('sig-banner')).toContainText('all valid', { timeout: 20000 });
+  expect(new TextDecoder('latin1').decode(bytes)).toContain('/Encrypt');
+  if (python) {
+    const file = `tests/output/e2e/signed-encrypted-${test.info().project.name}.pdf`;
+    writeFileSync(file, bytes);
+    const res = JSON.parse(execFileSync(python, ['tools/validate.py', 'sigs', file, `${FIX}/certs/ca.crt`], { encoding: 'utf8', env: { ...process.env, PDF_PASSWORD: 'secret' } }));
+    expect(res.signatures[0]).toMatchObject({ intact: true, valid: true });
+  }
+});

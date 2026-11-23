@@ -31,6 +31,6 @@ useDoc.subscribe(async (s, prev) => {
   const bytes = s.file?.bytes ?? null;
   useSignatures.setState({ loading: !!bytes, forBytes: bytes, signatures: undefined, docMdp: undefined, hasDss: undefined });
   if (!bytes) return;
-  const result = await analyzeSignatures(bytes).catch(() => ({ signatures: [], docMdp: null, hasDss: false }));
+  const result = await analyzeSignatures(bytes, s.file?.password ?? '').catch(() => ({ signatures: [], docMdp: null, hasDss: false }));
   if (useSignatures.getState().forBytes === bytes) useSignatures.setState({ ...result, loading: false });
 });

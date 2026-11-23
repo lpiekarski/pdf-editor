@@ -55,9 +55,10 @@ export function FillBar() {
         formValues: s.formValues,
         createFields: found,
         removeAnnots: deletedAnnots(s),
+        password: file.password,
       });
       useFill.getState().toggle(false);
-      await useDoc.getState().open(file.name.replace(/\.pdf$/i, '') + '-fillable.pdf', bytes);
+      await useDoc.getState().open(file.name.replace(/\.pdf$/i, '') + '-fillable.pdf', bytes, file.password);
       useUi.getState().showToast(`Created ${found.length} form fields. Save to keep the fillable PDF.`);
     } catch (e) {
       useUi.getState().showToast(`Conversion failed: ${e instanceof Error ? e.message : e}`);

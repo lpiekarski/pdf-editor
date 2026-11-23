@@ -21,6 +21,7 @@ export function SaveButton({ showLabel }: { showLabel?: boolean }) {
 function SaveDialog({ onClose }: { onClose(): void }) {
   const file = useDoc((s) => s.file);
   const hasForm = useDoc((s) => s.hasForm);
+  const encrypted = useDoc((s) => s.file?.password !== undefined || s.restrictions.length > 0);
   const hasWhiteout = useEditor((s) => Object.values(s.objects).some((o) => o.kind === 'whiteout'));
   const [name, setName] = useState(suggestedName(file?.name ?? 'document.pdf'));
   const [flatten, setFlatten] = useState(false);
@@ -65,6 +66,7 @@ function SaveDialog({ onClose }: { onClose(): void }) {
           <span>Keep added text, shapes, drawings and images editable in other PDF apps (saved as annotations instead of becoming part of the page)</span>
         </label>
       )}
+      {encrypted && <p className="note">This PDF is encrypted. The saved file stays encrypted with the same password and restrictions.</p>}
       {hasWhiteout && (
         <p className="note warn">
           White-out only covers content visually. The text underneath is still in the file and can be extracted — do not rely on it

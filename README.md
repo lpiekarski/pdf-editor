@@ -36,7 +36,8 @@ A PDF editor that runs entirely in the browser — desktop and phone. Files are 
 - Certificate trust is not checked against a trust store. The panel shows the chain and says "Trust: not checked".
 - Signing keys: RSA only (the PKCS#12 loader does not support EC keys).
 - The PDF's own existing text cannot be edited in place. Use white-out plus new text instead. **White-out only hides content visually** — the text underneath remains in the file (the save dialog warns about this).
-- XFA forms, and signing or editing encrypted PDFs, are not supported. Password-protected PDFs can be opened and viewed.
+- XFA forms are not supported.
+- Encrypted PDFs (RC4, AES-128, AES-256; with or without an open password) can be edited, filled and signed; the saved file stays encrypted with the same password and restriction flags. Certificate-based (public-key) PDF encryption is not supported.
 - Field detection is heuristic and works on vector PDFs. Scanned pages have no lines to detect, so you place text manually.
 
 ## Development

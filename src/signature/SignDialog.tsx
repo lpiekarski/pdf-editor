@@ -91,6 +91,7 @@ export function SignDialog({ onClose }: { onClose(): void }) {
         images: st.images,
         formValues: st.formValues,
         removeAnnots: deletedAnnots(st),
+        password: file.password,
       });
       // 2. Sign.
       let field: SignField;
@@ -119,6 +120,7 @@ export function SignDialog({ onClose }: { onClose(): void }) {
         };
       }
       const signed = await signPdf(edited, {
+        password: file.password,
         signer: loaded.signer,
         field,
         reason: reason || undefined,
@@ -130,7 +132,7 @@ export function SignDialog({ onClose }: { onClose(): void }) {
       // 3. Offer the signed file for saving and reopen it so the signature panel shows it.
       const name = suggestedName(file.name, '-signed');
       await saveBytes(signed, name);
-      await useDoc.getState().open(name, signed);
+      await useDoc.getState().open(name, signed, file.password);
       useUi.getState().showToast('Signed. Check the signature panel for details.');
       onClose();
     } catch (e) {

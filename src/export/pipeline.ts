@@ -30,12 +30,14 @@ export interface ExportInput {
   removeAnnots?: { page: number; ref: { num: number; gen: number } }[];
   /** Save added text/shapes/drawings/images as editable annotations instead of flattening them. */
   keepAsAnnotations?: boolean;
+  /** Password of an encrypted PDF; the saved file stays encrypted. */
+  password?: string;
 }
 
 const CONTENT_KINDS = new Set(['text', 'image', 'shape', 'ink', 'whiteout', 'mark']);
 
 export async function exportPdf(input: ExportInput): Promise<Uint8Array> {
-  const up = await IncrementalUpdate.load(input.bytes);
+  const up = await IncrementalUpdate.load(input.bytes, input.password);
   const doc = up.doc;
   const res = new ResourceCache(doc, input.images);
 

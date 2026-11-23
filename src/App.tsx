@@ -14,6 +14,7 @@ import { useEditorShortcuts } from './editor/shortcuts';
 import { useMarkupTool } from './editor/markup';
 import { FormLayer } from './forms/FormLayer';
 import { SaveButton } from './ui/SaveDialog';
+import { RestrictionBanner } from './ui/RestrictionBanner';
 import { pdfjs } from './viewer/pdfjs';
 import { FillLayer } from './forms/FillLayer';
 import { FillBar, FillToggle } from './forms/FillBar';
@@ -96,6 +97,7 @@ export function App() {
     ),
     banner: (
       <>
+        <RestrictionBanner />
         <SignatureBanner />
         <FillBar />
       </>

@@ -21,6 +21,7 @@ export async function buildOutput(opts: { flattenForms?: boolean; keepAsAnnotati
     formValues: s.formValues,
     flattenForms: opts.flattenForms,
     removeAnnots: deletedAnnots(s),
+    password: file.password,
     keepAsAnnotations: opts.keepAsAnnotations,
   });
 }

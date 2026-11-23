@@ -38,6 +38,8 @@ export interface SignOptions {
   /** FieldMDP: form fields that become read-only once this signature is applied. */
   lockFields?: { action: 'All' | 'Include' | 'Exclude'; fields: string[] };
   date?: Date;
+  /** Password of an encrypted PDF (empty for permission-only encryption). */
+  password?: string;
 }
 
 const PLACEHOLDER = 9999999999;
@@ -47,7 +49,7 @@ const latin1 = new TextDecoder('latin1');
 export class SignError extends Error {}
 
 export async function signPdf(bytes: Uint8Array, opts: SignOptions): Promise<Uint8Array> {
-  const up = await IncrementalUpdate.load(bytes);
+  const up = await IncrementalUpdate.load(bytes, opts.password);
   const doc = up.doc;
   const ctx = doc.context;
   const date = opts.date ?? new Date();

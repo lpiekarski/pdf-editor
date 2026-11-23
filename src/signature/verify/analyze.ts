@@ -9,6 +9,7 @@
 import * as asn1js from 'asn1js';
 import * as pkijs from 'pkijs';
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRef, PDFStream, PDFString, type PDFObject } from 'pdf-lib';
+import { loadPdf } from '../../pdf/load';
 import { ensureCryptoEngine, OID, signerDisplayName } from '../signer';
 
 export type ChangeKind = 'signing' | 'form' | 'annotation' | 'other';
@@ -197,11 +198,12 @@ function certificationLevel(sig: PDFDict): number | null {
   return null;
 }
 
-export async function analyzeSignatures(bytes: Uint8Array): Promise<DocSignatures> {
+export async function analyzeSignatures(bytes: Uint8Array, password = ''): Promise<DocSignatures> {
   ensureCryptoEngine();
   let doc: PDFDocument;
   try {
-    doc = await PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true, throwOnInvalidObject: false });
+    // Encrypted files are decrypted so names, reasons and dates are readable (/Contents is never encrypted).
+    doc = (await loadPdf(bytes, password)).doc;
   } catch {
     return { signatures: [], docMdp: null, hasDss: false };
   }
@@ -355,7 +357,7 @@ export async function analyzeSignatures(bytes: Uint8Array): Promise<DocSignature
   for (const s of results) {
     if (s.integrity === 'malformed' || s.coversWholeFile || !s.revisionEnd) continue;
     try {
-      const diff = await classifyChanges(bytes.subarray(0, s.revisionEnd), doc);
+      const diff = await classifyChanges(bytes.subarray(0, s.revisionEnd), doc, password);
       s.changes = diff.kinds;
       s.changedFields = diff.fields;
       const p = docMdp;
@@ -384,8 +386,8 @@ function fingerprint(o: PDFObject): string {
 }
 
 /** Compares the signed revision with the final document and classifies every changed object. */
-export async function classifyChanges(signedBytes: Uint8Array, finalDoc: PDFDocument): Promise<{ kinds: ChangeKind[]; fields: string[] }> {
-  const old = await PDFDocument.load(signedBytes, { updateMetadata: false, ignoreEncryption: true, throwOnInvalidObject: false });
+export async function classifyChanges(signedBytes: Uint8Array, finalDoc: PDFDocument, password = ''): Promise<{ kinds: ChangeKind[]; fields: string[] }> {
+  const old = (await loadPdf(signedBytes, password)).doc;
   const kinds = new Set<ChangeKind>();
   const fields = new Set<string>();
   const oldCtx = old.context;

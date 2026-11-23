@@ -135,3 +135,42 @@ describe.skipIf(!hasPython)('FieldMDP locks', () => {
     expect(pyValidate('sigs', writeOut('lock-bad.pdf', badEdit), TEST_CA).signatures[0].bottom_line).toBe(false);
   });
 });
+
+describe.skipIf(!hasPython)('encrypted PDFs', () => {
+  it.each([
+    ['enc-rc4.pdf', ''],
+    ['enc-aes128.pdf', ''],
+    ['enc-aes256.pdf', ''],
+    ['enc-aes256-password.pdf', 'secret'],
+  ])('fills, signs and re-fills %s while keeping it encrypted', async (file, password) => {
+    const { analyzeSignatures } = await import('../verify/analyze');
+    const { signer } = await loadP12(p12, 'test');
+    const bytes = fixture(file);
+    const isForm = !file.includes('password'); // the password fixture is the flat form
+    const filled = isForm ? await exportPdf({ bytes, pages: [A4], objects: [], images: {}, formValues: { name: 'Zofia Wójcik' }, password }) : bytes;
+    const signed = await signPdf(filled, {
+      signer,
+      password,
+      reason: 'Zatwierdzam',
+      field: { kind: 'new', page: 0, geometry: A4, rect: { x: 300, y: 700, width: 200, height: 50 }, appearance: { showText: true } },
+    });
+
+    const res = pyValidate('sigs', writeOut(`signed-${file}`, signed), TEST_CA, password);
+    expect(res.signatures[0]).toMatchObject({ intact: true, valid: true, trusted: true, bottom_line: true });
+    expect(pyValidate('check', `tests/output/signed-${file}`, undefined, password)).toMatchObject({ ok: true, encrypted: true });
+
+    // Our own verifier decrypts the readable parts (reason) and validates the signature.
+    const [ours] = (await analyzeSignatures(signed, password)).signatures;
+    expect(ours).toMatchObject({ integrity: 'ok', signatureValid: true, coversWholeFile: true, reason: 'Zatwierdzam', signerName: 'Jan Kowalski' });
+
+    if (isForm) {
+      const { PDFDocument } = await import('pdf-lib');
+      const { loadPdf } = await import('../../pdf/load');
+      const again = await exportPdf({ bytes: signed, pages: [A4], objects: [], images: {}, formValues: { name: 'Zofia Wójcik', city: 'x' }, password });
+      expect(again.length).toBe(signed.length); // unchanged values: nothing appended
+      const { doc } = await loadPdf(filled, password);
+      expect(doc.getForm().getTextField('name').getText()).toBe('Zofia Wójcik');
+      expect(doc).toBeInstanceOf(PDFDocument);
+    }
+  });
+});
